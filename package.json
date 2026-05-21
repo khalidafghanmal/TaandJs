@@ -1,0 +1,72 @@
+{
+  "name": "taandjs",
+  "version": "0.1.0",
+  "description": "TaandJs — a fast, secure, developer-friendly JavaScript framework",
+  "type": "module",
+  "main": "engine/index.js",
+  "bin": {
+    "taand": "bin/taand.js",
+    "create-taand": "bin/create.js"
+  },
+  "scripts": {
+    "dev": "node bin/dev.js",
+    "build": "node bin/build.js",
+    "prestart": "node -e \"import fs from 'node:fs'; if (!fs.existsSync('dist/serve.js')) { console.error('[Taand] Run npm run build first'); process.exit(1); }\"",
+    "start": "node dist/serve.js",
+    "start:raw": "node bin/serve.js",
+    "serve": "node dist/serve.js",
+    "taand": "node bin/taand.js",
+    "create": "node bin/create.js",
+    "test": "node --test \"specs/**/*.test.js\"",
+    "queue:work": "node bin/queue.js work",
+    "queue:failed": "node bin/queue.js failed",
+    "postinstall": "node bin/postinstall.js",
+    "db:generate": "prisma generate --schema schema/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema schema/schema.prisma",
+    "db:migrate:prod": "prisma migrate deploy --schema schema/schema.prisma",
+    "db:studio": "prisma studio --schema schema/schema.prisma",
+    "db:push": "prisma db push --schema schema/schema.prisma",
+    "db:seed": "node bin/taand.js db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "bundle:template": "node bin/bundle-template.js",
+    "prepublish:create-taand": "node bin/bundle-template.js",
+    "satan:install": "node ../Satan/bin/satan.js install",
+    "satan:uninstall": "node ../Satan/bin/satan.js uninstall"
+  },
+  "satan": {
+    "path": "../Satan"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "framework",
+    "Taand",
+    "TaandJs",
+    "nodejs",
+    "routing",
+    "prisma"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TaandJs/TaandJs.git",
+    "directory": "TaandJs"
+  },
+  "bugs": {
+    "url": "https://github.com/TaandJs/TaandJs/issues"
+  },
+  "homepage": "https://github.com/TaandJs/TaandJs#readme",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1075.0",
+    "@prisma/client": "^6.19.3",
+    "cron-parser": "^5.6.1",
+    "redis": "^6.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "prisma": "^6.19.3"
+  }
+}

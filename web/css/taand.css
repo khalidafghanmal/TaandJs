@@ -1,0 +1,380 @@
+/* TaandJs — taand-style guest UI (welcome + error pages) */
+
+@import url('https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700');
+
+:root {
+  --t-bg: #fdfdfc;
+  --t-surface: #ffffff;
+  --t-text: #1b1b18;
+  --t-muted: #706f6c;
+  --t-border: rgba(26, 26, 0, 0.16);
+  --t-border-soft: #e3e3e0;
+  --t-accent: #d97706;
+  --t-accent-light: #fbbf24;
+  --t-accent-hover: #fcd34d;
+  --t-accent-bg: rgba(245, 158, 11, 0.1);
+  --t-accent-border: rgba(251, 191, 36, 0.35);
+  --t-btn-bg: #1b1b18;
+  --t-btn-hover: #000000;
+  --t-font: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --t-bg: #0a0a0a;
+    --t-surface: #161615;
+    --t-text: #ededec;
+    --t-muted: #a1a09a;
+    --t-border: rgba(255, 250, 237, 0.18);
+    --t-border-soft: #3e3e3a;
+    --t-accent: #fbbf24;
+    --t-accent-light: #fcd34d;
+    --t-accent-hover: #fde68a;
+    --t-accent-bg: rgba(245, 158, 11, 0.15);
+    --t-accent-border: rgba(251, 191, 36, 0.35);
+    --t-btn-bg: #fbbf24;
+    --t-btn-hover: #fcd34d;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body.taand-page {
+  min-height: 100vh;
+  font-family: var(--t-font);
+  background: var(--t-bg);
+  color: var(--t-text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* ── Welcome page ── */
+
+body.taand-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.taand-wrap {
+  width: 100%;
+  max-width: 64rem;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+@media (min-width: 1024px) {
+  .taand-wrap { flex-direction: row; align-items: stretch; }
+}
+
+.taand-panel {
+  flex: 1;
+  padding: 2.5rem 1.5rem 1.5rem;
+  background: var(--t-surface);
+  box-shadow: inset 0 0 0 1px var(--t-border);
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .taand-panel {
+    padding: 5rem 5rem 2.5rem;
+    border-radius: 0.5rem 0 0 0.5rem;
+  }
+}
+
+.taand-panel .taand-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.taand-panel .taand-title span { color: var(--t-accent); }
+
+.taand-panel h2 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.taand-panel p {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--t-muted);
+  margin-bottom: 0.5rem;
+}
+
+.taand-steps {
+  list-style: none;
+  margin: 1rem 0 1.5rem;
+}
+
+.taand-step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  font-size: 13px;
+  line-height: 20px;
+  position: relative;
+}
+
+.taand-step-line {
+  position: absolute;
+  left: 0.4rem;
+  top: 50%;
+  bottom: -50%;
+  border-left: 1px solid var(--t-border-soft);
+}
+
+.taand-step:first-child .taand-step-line { top: 50%; bottom: 0; }
+.taand-step:last-child .taand-step-line { top: 0; bottom: 50%; }
+
+.taand-step-ring {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border-soft);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.taand-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--t-border-soft);
+}
+
+.taand-link {
+  color: var(--t-accent);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.taand-code {
+  font-size: 12px;
+  background: var(--t-accent-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--t-accent);
+}
+
+.taand-btn {
+  display: inline-block;
+  padding: 0.375rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-family: inherit;
+  background: var(--t-btn-bg);
+  color: #ffffff;
+  border: 1px solid var(--t-btn-bg);
+  border-radius: 0.125rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+@media (prefers-color-scheme: dark) {
+  .taand-btn { color: #1c1917; }
+}
+
+.taand-btn:hover {
+  background: var(--t-btn-hover);
+  border-color: var(--t-btn-hover);
+}
+
+.taand-btn--secondary {
+  background: #f5f5f4;
+  color: var(--t-text);
+  border-color: var(--t-border-soft);
+}
+
+@media (prefers-color-scheme: dark) {
+  .taand-btn--secondary {
+    background: #262625;
+    color: var(--t-text);
+    border-color: var(--t-border-soft);
+  }
+}
+
+.taand-badge-version {
+  margin-top: 2.5rem;
+  font-size: 13px;
+  color: var(--t-muted);
+}
+
+.taand-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  background: var(--t-surface);
+  box-shadow: inset 0 0 0 1px var(--t-border);
+  border-radius: 0.5rem 0.5rem 0 0;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .taand-visual {
+    width: 438px;
+    flex-shrink: 0;
+    min-height: auto;
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+}
+
+.taand-visual-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.08) 0%,
+    rgba(245, 158, 11, 0.04) 50%,
+    transparent 100%
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  .taand-visual-bg {
+    background: linear-gradient(
+      135deg,
+      rgba(251, 191, 36, 0.12) 0%,
+      rgba(217, 119, 6, 0.06) 50%,
+      transparent 100%
+    );
+  }
+}
+
+.taand-logo-wrap {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.taand-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #fcd34d, #f59e0b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #1c1917;
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.35);
+}
+
+.taand-logo-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.taand-logo-text span { color: var(--t-accent); }
+
+.taand-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--t-accent-bg);
+  border: 1px solid var(--t-accent-border);
+  color: var(--t-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.taand-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+/* ── Error pages ── */
+
+body.taand-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.taand-brand {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.5rem;
+  font-weight: 600;
+  font-size: 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.taand-brand span { color: var(--t-accent); }
+
+.taand-error-card {
+  width: 100%;
+  max-width: 28rem;
+  text-align: center;
+  background: var(--t-surface);
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px var(--t-border);
+  padding: 2.5rem 2rem;
+}
+
+.taand-error-code {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--t-accent);
+  letter-spacing: -0.04em;
+  margin-bottom: 0.75rem;
+}
+
+.taand-error-card h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.taand-error-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--t-muted);
+  margin-bottom: 0.75rem;
+}
+
+.taand-error-hint {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t-muted);
+  margin-bottom: 1.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.375rem;
+  background: var(--t-accent-bg);
+  border: 1px dashed var(--t-accent-border);
+}
+
+.taand-error-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}

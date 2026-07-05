@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TaandJs — a fast, secure JavaScript framework built for modern Node.js apps.">
+  <title>{{ $appName ?? 'TaandJs' }}</title>
+  <link rel="stylesheet" href="{{ asset('css/taand.css') }}">
+</head>
+<body class="taand-page taand-welcome">
+  <div class="taand-wrap">
+    <div class="taand-panel">
+      <p class="taand-title">Welcome to <span>{{ $appName ?? 'TaandJs' }}</span></p>
+      <h2>Let's get started</h2>
+      <ul class="taand-steps">
+        <li class="taand-step">
+          <span class="taand-step-line"></span>
+          <span class="taand-step-ring"><span class="taand-step-dot"></span></span>
+          <span>Read the <a href="https://github.com/TaandJs/TaandJs/blob/main/TaandJs/docs/README.md" class="taand-link" target="_blank" rel="noopener">Documentation</a></span>
+        </li>
+        <li class="taand-step">
+          <span class="taand-step-line"></span>
+          <span class="taand-step-ring"><span class="taand-step-dot"></span></span>
+          <span>Define routes in <code class="taand-code">flow/http.js</code></span>
+        </li>
+        <li class="taand-step">
+          <span class="taand-step-line"></span>
+          <span class="taand-step-ring"><span class="taand-step-dot"></span></span>
+          <span>Add controllers under <code class="taand-code">src/actions/</code></span>
+        </li>
+        <li class="taand-step">
+          <span class="taand-step-line"></span>
+          <span class="taand-step-ring"><span class="taand-step-dot"></span></span>
+          <span>Create views in <code class="taand-code">ui/</code></span>
+        </li>
+      </ul>
+      <a href="/" class="taand-btn">Start building</a>
+      <p class="taand-badge-version">{{ $appName ?? 'TaandJs' }} v{{ $version ?? '0.1.0' }}</p>
+    </div>
+    <div class="taand-visual">
+      <div class="taand-visual-bg"></div>
+      <div class="taand-logo-wrap">
+        <div class="taand-logo">T</div>
+        <div class="taand-logo-text"><span>Taand</span>Js</div>
+        <div class="taand-status">
+          <span class="taand-status-dot"></span>
+          {{ $env ?? 'local' }} · running
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

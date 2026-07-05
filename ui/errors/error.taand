@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{{ $code }} — {{ $title }}</title>
+  <link rel="stylesheet" href="{{ asset('css/taand.css') }}">
+</head>
+<body class="taand-page taand-error">
+  <a href="/" class="taand-brand"><span>Taand</span>Js</a>
+
+  <div class="taand-error-card">
+    <div class="taand-error-code">{{ $code }}</div>
+    <h1>{{ $title }}</h1>
+    <p class="taand-error-message">{{ $message }}</p>
+
+    @if($hint)
+      <p class="taand-error-hint">{{ $hint }}</p>
+    @end
+
+    <div class="taand-error-actions">
+      <a href="/" class="taand-btn">Go home</a>
+      @if($code === 401 || $code === 419)
+        <a href="/login" class="taand-btn taand-btn--secondary">Sign in</a>
+      @end
+      @if($code === 404)
+        <a href="javascript:history.back()" class="taand-btn taand-btn--secondary">Go back</a>
+      @end
+      @if($code === 500 || $code === 503)
+        <a href="javascript:location.reload()" class="taand-btn taand-btn--secondary">Try again</a>
+      @end
+    </div>
+  </div>
+</body>
+</html>

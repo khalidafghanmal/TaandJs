@@ -1,0 +1,66 @@
+// TaandJs — edit models here, then: npm run db:migrate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "sqlite"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Core user model — auth, roles, admin. Add your own models below.
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  password       String
+  role           String   @default("user")
+  rememberToken  String?
+  personalAccessTokens PersonalAccessToken[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+/// Sanctum-style personal API tokens — per-user Bearer auth.
+model PersonalAccessToken {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  token      String    @unique
+  abilities  String    @default("[\"*\"]")
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Queued jobs — background work off the request thread.
+model Job {
+  id          Int       @id @default(autoincrement())
+  queue       String    @default("default")
+  payload     String
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  reservedAt  DateTime?
+  availableAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([queue, availableAt])
+  @@index([reservedAt])
+}
+
+/// Failed jobs — for inspection and retry.
+model FailedJob {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique
+  queue     String
+  payload   String
+  exception String
+  failedAt  DateTime @default(now())
+
+  @@index([queue])
+}

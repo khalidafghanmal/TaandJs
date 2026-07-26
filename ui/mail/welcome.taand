@@ -1,0 +1,13 @@
+@layout mail.layout
+@section content
+  <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#1b1b18;">Welcome, {{ $name }}!</h1>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#44403c;">
+    Thanks for joining <strong>{{ $appName }}</strong>. Your account is ready.
+  </p>
+  <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#44403c;">
+    Sign in anytime to get started.
+  </p>
+  <a href="{{ $actionUrl }}" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#7c6cff,#22d3ee);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">
+    Go to dashboard
+  </a>
+@end

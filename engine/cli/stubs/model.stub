@@ -1,0 +1,9 @@
+/**
+ * Prisma model accessor for {{class}}.
+ * Use with: const users = {{delegate}}(db);
+ */
+export function {{delegate}}(db) {
+  return db.{{delegate}};
+}
+
+export default {{delegate}};

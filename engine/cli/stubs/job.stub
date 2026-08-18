@@ -1,0 +1,10 @@
+import { Job } from '../../engine/queue/Job.js';
+
+export class {{class}} extends Job {
+  async handle() {
+    // ...
+  }
+}
+
+export default {{class}};
+

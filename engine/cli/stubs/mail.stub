@@ -1,0 +1,11 @@
+import { Mailable } from '../../engine/mail/Mailable.js';
+
+export class {{class}} extends Mailable {
+  build() {
+    return this.subject('Hello')
+      .text('Hello from TaandJs');
+  }
+}
+
+export default {{class}};
+

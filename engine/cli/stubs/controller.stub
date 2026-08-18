@@ -1,0 +1,10 @@
+import { Controller } from '../../engine/core/Controller.js';
+
+export class {{class}} extends Controller {
+  index() {
+    return this.view('main');
+  }
+}
+
+export default {{class}};
+

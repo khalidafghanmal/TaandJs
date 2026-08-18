@@ -1,0 +1,9 @@
+import { Seeder } from '../../engine/database/Seeder.js';
+
+export class {{class}} extends Seeder {
+  async run() {
+    // await this.db().yourModel.create({ data: { ... } });
+  }
+}
+
+export default {{class}};

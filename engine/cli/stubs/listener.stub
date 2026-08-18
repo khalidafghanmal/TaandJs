@@ -1,0 +1,11 @@
+import { Listener } from '../../engine/events/Listener.js';
+
+export class {{class}} extends Listener {
+  async handle(event) {
+    void event;
+    // ...
+  }
+}
+
+export default {{class}};
+

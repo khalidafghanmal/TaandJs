@@ -1,0 +1,11 @@
+import route from '../../../start/route.js';
+
+/**
+ * {{module}} module routes — auto-loaded after flow/http.js (same Router).
+ * Disable: TAAND_MODULES_AUTO_ROUTES=false or remove this file.
+ */
+route.group({ prefix: '/{{moduleSlug}}', name: '{{moduleSlug}}.' }, () => {
+  route.get('/', '{{controller}}@index').name('index');
+});
+
+export default route;

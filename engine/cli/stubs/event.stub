@@ -1,0 +1,11 @@
+import { Event } from '../../engine/events/Event.js';
+
+export class {{class}} extends Event {
+  constructor(payload = {}) {
+    super();
+    this.payload = payload;
+  }
+}
+
+export default {{class}};
+

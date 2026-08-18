@@ -1,0 +1,10 @@
+import { Middleware } from '../../engine/middleware/Middleware.js';
+
+export class {{class}} extends Middleware {
+  handle(request, next) {
+    return next(request);
+  }
+}
+
+export default {{class}};
+

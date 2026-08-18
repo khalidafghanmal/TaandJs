@@ -1,0 +1,9 @@
+import { ServiceProvider } from '../../engine/core/ServiceProvider.js';
+
+export class {{class}} extends ServiceProvider {
+  register() {}
+  boot() {}
+}
+
+export default {{class}};
+

@@ -1,0 +1,37 @@
+{
+  "name": "create-taand",
+  "version": "0.1.0",
+  "description": "Scaffold a new TaandJs application",
+  "type": "module",
+  "bin": {
+    "create-taand": "index.js"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "template"
+  ],
+  "scripts": {
+    "prepublishOnly": "node ../../bin/bundle-template.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "Taand",
+    "TaandJs",
+    "scaffold",
+    "create",
+    "framework"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TaandJs/TaandJs.git",
+    "directory": "TaandJs/packages/create-taand"
+  },
+  "bugs": {
+    "url": "https://github.com/TaandJs/TaandJs/issues"
+  },
+  "homepage": "https://github.com/TaandJs/TaandJs#readme"
+}

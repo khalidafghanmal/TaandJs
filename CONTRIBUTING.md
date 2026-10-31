@@ -17,7 +17,7 @@ npm test
 1. Fork the repo and create a branch from `main`.
 2. Make focused changes — one feature or fix per PR.
 3. Run `npm test` and `npm run build` before opening the PR.
-4. Update docs in `docs/` if you change public behavior.
+
 
 ## Code style
 

@@ -1,14 +1,11 @@
 # Dependencies
 node_modules/
 
-# Environment
-.env
-.env.local
-.env.*.local
+
 
 # Build output
 dist/
-
+docs/
 # Runtime / generated
 var/logs/*
 !var/logs/.gitignore

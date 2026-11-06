@@ -99,3 +99,25 @@ test('cache null driver discards values', async () => {
   await cache.put('x', 'y');
   assert.equal(await cache.has('x'), false);
 });
+
+test('cache dashboard does not reflect the store name into inline script', async () => {
+  const { CacheDashboard } = await import('../engine/cache/CacheDashboard.js');
+  const { app, cache } = cacheApp({ config: { app: { env: 'local' } } });
+  const config = app.make('config');
+  app.debug = true;
+  app.make = (name) => {
+    if (name === 'config') return config;
+    if (name === 'cache') return cache;
+    return null;
+  };
+
+  const payload = "');alert(document.cookie);//";
+  const request = { query: { store: payload }, remoteAddress: () => '127.0.0.1', header: () => undefined };
+  const { body } = await CacheDashboard.index(app, request);
+
+  // Browsers HTML-decode attribute values before running them as JS, so &quot;/&#39; escaping is not enough.
+  for (const [, handler] of body.matchAll(/onclick="([^"]*)"/g)) {
+    const decoded = handler.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    assert.ok(!decoded.includes('alert(document.cookie)'), decoded);
+  }
+});

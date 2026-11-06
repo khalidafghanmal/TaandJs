@@ -74,3 +74,37 @@ test('Pipeline still runs terminate on success', async () => {
   await terminate();
   assert.equal(terminated, true);
 });
+
+test('ExceptionHandler hides 5xx error messages when debug is off', async () => {
+  const { app } = miniApp();
+  const exceptions = new ExceptionHandler(app);
+  const secret = 'connect ECONNREFUSED db.internal:5432 user=taand';
+
+  const json = await exceptions.render(new Error(secret), req('/api/users'));
+  assert.equal(json.status, 500);
+  assert.match(json.headers['Content-Type'], /json/);
+  assert.doesNotMatch(json.body, /ECONNREFUSED/);
+
+  const html = await exceptions.render(Object.assign(new Error(secret), { status: 503 }), req('/'));
+  assert.equal(html.status, 503);
+  assert.match(html.headers['Content-Type'], /html/);
+  assert.doesNotMatch(html.body, /ECONNREFUSED/);
+
+  const odd = await exceptions.render(Object.assign(new Error(secret), { status: 200 }), req('/api/x'));
+  assert.equal(odd.status, 500);
+  assert.doesNotMatch(odd.body, /ECONNREFUSED/);
+
+  const notFound = await exceptions.render(HttpError.notFound('No such post'), req('/api/posts/9'));
+  assert.equal(notFound.status, 404);
+  assert.match(notFound.body, /No such post/);
+});
+
+test('ExceptionHandler keeps 5xx error messages when debug is on', async () => {
+  const { app } = miniApp({ handlers: { log: { error() {}, warning() {} } } });
+  app.debug = true;
+  const exceptions = new ExceptionHandler(app);
+
+  const response = await exceptions.render(new Error('db exploded'), req('/api/users'));
+  assert.equal(response.status, 500);
+  assert.match(response.body, /db exploded/);
+});

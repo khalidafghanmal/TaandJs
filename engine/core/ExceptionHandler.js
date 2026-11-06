@@ -73,11 +73,10 @@ export class ExceptionHandler {
       return this.#debugOverlay(error, status, request);
     }
 
-    if (status >= 400 && status < 600) {
-      return errors.respond(request, status, { message: error.message });
-    }
+    const code = status >= 400 && status < 600 ? status : 500;
 
-    return errors.respond(request, 500, { message: error.message });
+    // 5xx messages come from drivers/internals (DB hosts, SQL, file paths) — only show them in debug.
+    return errors.respond(request, code, code < 500 || this.app.debug ? { message: error.message } : {});
   }
 
   #debugOverlay(error, status, request) {

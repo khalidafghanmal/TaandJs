@@ -8,6 +8,18 @@ export function isEmpty(value) {
   return false;
 }
 
+/**
+ * Size used by min/max: numeric value for fields with a numeric rule, item count
+ * for arrays, otherwise string length (Laravel semantics).
+ */
+function sizeOf(value, ruleList = []) {
+  const numeric = ruleList.some((rule) => rule.name === 'numeric' || rule.name === 'integer');
+  if (numeric && typeof value === 'string' && value.trim() !== '') return Number(value);
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' || Array.isArray(value)) return value.length;
+  return NaN;
+}
+
 export function getValue(data, key) {
   if (!key.includes('.')) return data[key];
 
@@ -61,18 +73,12 @@ export const rules = {
     return (typeof value === 'string' && EMAIL_RE.test(value)) || 'email';
   },
 
-  min(value, [min]) {
-    const n = Number(min);
-    if (typeof value === 'string') return value.length >= n || 'min';
-    if (typeof value === 'number') return value >= n || 'min';
-    return 'min';
+  min(value, [min], _data, _field, _rule, ruleList) {
+    return sizeOf(value, ruleList) >= Number(min) || 'min';
   },
 
-  max(value, [max]) {
-    const n = Number(max);
-    if (typeof value === 'string') return value.length <= n || 'max';
-    if (typeof value === 'number') return value <= n || 'max';
-    return 'max';
+  max(value, [max], _data, _field, _rule, ruleList) {
+    return sizeOf(value, ruleList) <= Number(max) || 'max';
   },
 
   numeric(value) {

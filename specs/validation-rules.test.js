@@ -132,3 +132,26 @@ test('validator custom messages', async () => {
 
 test('min numeric value', () => assert.equal(rules.min(10, ['5']), true));
 test('max numeric value fail', () => assert.equal(rules.max(10, ['5']), 'max'));
+
+test('min and max compare numeric strings by value when the field is numeric', async () => {
+  const { validator } = miniApp();
+
+  assert.deepEqual(await validator.make({ age: '25' }, { age: 'required|integer|min:18' }), { age: '25' });
+  assert.deepEqual(await validator.make({ price: '9.5' }, { price: 'numeric|max:10' }), { price: '9.5' });
+  await assert.rejects(() => validator.make({ age: '5' }, { age: 'required|integer|min:18' }), ValidationError);
+  await assert.rejects(() => validator.make({ price: '150' }, { price: 'numeric|max:100' }), ValidationError);
+});
+
+test('min and max keep string length semantics without a numeric rule', async () => {
+  const { validator } = miniApp();
+
+  assert.deepEqual(await validator.make({ code: '12' }, { code: 'string|min:2' }), { code: '12' });
+  await assert.rejects(() => validator.make({ code: '25' }, { code: 'string|min:18' }), ValidationError);
+});
+
+test('min and max count array items', async () => {
+  const { validator } = miniApp();
+
+  assert.deepEqual(await validator.make({ tags: ['a', 'b'] }, { tags: 'array|min:2|max:3' }), { tags: ['a', 'b'] });
+  await assert.rejects(() => validator.make({ tags: ['a'] }, { tags: 'array|min:2' }), ValidationError);
+});

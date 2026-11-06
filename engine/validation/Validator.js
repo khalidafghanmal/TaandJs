@@ -40,7 +40,7 @@ export class Validator {
           throw new Error(`[Taand] Unknown validation rule: ${rule.name}`);
         }
 
-        const result = await Promise.resolve(handler(value, rule.params, data, field, rule));
+        const result = await Promise.resolve(handler(value, rule.params, data, field, rule, ruleList));
         if (result === true) continue;
 
         const ruleKey = typeof result === 'string' ? result : rule.name;

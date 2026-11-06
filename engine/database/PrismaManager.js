@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { ProjectPaths, inProject } from '../core/ProjectPaths.js';
 
 /**
  * Prisma lifecycle — singleton client, safe for Taand dev hot-reload.
@@ -36,7 +37,8 @@ export class PrismaManager {
     const filePath = url.slice(5);
     if (path.isAbsolute(filePath)) return url;
 
-    return `file:${path.resolve(app.basePath, 'prisma', filePath)}`;
+    // Prisma CLI resolves relative SQLite paths against the schema directory.
+    return `file:${path.resolve(inProject(app.basePath, ProjectPaths.prisma), filePath)}`;
   }
 
   async connect() {

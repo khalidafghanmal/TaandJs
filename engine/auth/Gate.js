@@ -43,7 +43,8 @@ export class Gate {
         const instance = new Policy(this.app);
         const method = this.#policyMethod(ability);
 
-        if (typeof instance[method] === 'function') {
+        // Skip inherited Object members (toString, valueOf, constructor…) — they would answer truthy.
+        if (typeof instance[method] === 'function' && !(method in Object.prototype)) {
           return Boolean(await instance[method](user, resource, ...args.slice(1)));
         }
       }
@@ -71,7 +72,9 @@ export class Gate {
 
   #roleAllows(ability, role) {
     const config = this.app.make('config').get('auth.roles', {});
-    const permissions = config.permissions?.[role] ?? [];
+    const permissions = config.permissions && Object.hasOwn(config.permissions, role)
+      ? config.permissions[role]
+      : [];
 
     if (permissions.includes('*')) return true;
     return permissions.includes(ability);

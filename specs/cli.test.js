@@ -11,6 +11,9 @@ import { MakeControllerCommand } from '../engine/cli/commands/make/MakeControlle
 import { GeneratorEngine } from '../engine/cli/generator/GeneratorEngine.js';
 import { TemplateEngine } from '../engine/cli/generator/TemplateEngine.js';
 import { isMakeCommand } from '../engine/cli/generator/runGenerator.js';
+import { defaultSocketPath } from '../engine/cli/daemon/protocol.js';
+import { tryDaemonDispatch } from '../engine/cli/daemon/client.js';
+import { CliDaemonServer } from '../engine/cli/daemon/server.js';
 
 const execFileAsync = promisify(execFile);
 const TAAND_ROOT = path.resolve(import.meta.dirname, '..');
@@ -114,4 +117,59 @@ test('make:controller cold start completes under 1 second', async () => {
   });
   const elapsed = Date.now() - start;
   assert.ok(elapsed < 2500, `expected <2500ms, got ${elapsed}ms`);
+});
+
+test('daemon socket name is scoped per project root (and user on POSIX)', () => {
+  const a = defaultSocketPath('/srv/project-a');
+  assert.equal(defaultSocketPath('/srv/project-a'), a);
+  assert.notEqual(defaultSocketPath('/srv/project-b'), a);
+  if (process.platform === 'win32') {
+    assert.match(a, /^\\\\\.\\pipe\\taand-cli-[0-9a-f]{16}$/);
+    assert.equal(defaultSocketPath('C:\\Work\\App'), defaultSocketPath('c:\\work\\app'));
+  } else {
+    assert.ok(a.includes(`taand-cli-${process.getuid()}-`), a);
+  }
+});
+
+test('daemon rejects RUN requests from another project root', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'taand-daemon-'));
+  const rootA = path.join(tmp, 'a');
+  const rootB = path.join(tmp, 'b');
+  for (const root of [rootA, rootB]) {
+    await fs.mkdir(path.join(root, 'start'), { recursive: true });
+    await fs.mkdir(path.join(root, 'src', 'actions'), { recursive: true });
+    await fs.writeFile(path.join(root, 'start', 'app.js'), 'export {};\n', 'utf8');
+    await fs.writeFile(path.join(root, 'package.json'), '{"name":"tmp","version":"0.0.0"}\n', 'utf8');
+  }
+
+  const socketPath = defaultSocketPath(rootA);
+  const server = new CliDaemonServer({ root: rootA, socketPath });
+  await server.start();
+  try {
+    const rejected = await tryDaemonDispatch(['make:controller', 'Foo'], { root: rootB, socketPath });
+    assert.equal(rejected?.exitCode, 1);
+    assert.match(rejected.stderr, /different project/);
+    await assert.rejects(fs.access(path.join(rootA, 'src', 'actions', 'Foo.js')));
+    await assert.rejects(fs.access(path.join(rootB, 'src', 'actions', 'Foo.js')));
+
+    const ok = await tryDaemonDispatch(['make:controller', 'Foo'], { root: rootA, socketPath });
+    assert.equal(ok?.exitCode, 0, ok?.stderr);
+    await fs.access(path.join(rootA, 'src', 'actions', 'Foo.js'));
+  } finally {
+    server.stop();
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('daemon replaces a stale socket file on startup', { skip: process.platform === 'win32' }, async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'taand-daemon-stale-'));
+  const socketPath = path.join(tmp, 'd.sock');
+  await fs.writeFile(socketPath, '');
+  const server = new CliDaemonServer({ root: tmp, socketPath });
+  try {
+    assert.equal(await server.start(), socketPath);
+  } finally {
+    server.stop();
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
 });

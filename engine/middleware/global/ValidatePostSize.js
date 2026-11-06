@@ -1,5 +1,5 @@
 import { Middleware } from '../Middleware.js';
-const MAX_BYTES = 1_048_576;
+import { maxBodyBytes } from '../../http/Request.js';
 
 /**
  * Rejects oversized bodies before handlers run.
@@ -7,8 +7,9 @@ const MAX_BYTES = 1_048_576;
 export class ValidatePostSize extends Middleware {
   async handle(request, next) {
     const length = Number(request.header('content-length') ?? 0);
+    const max = maxBodyBytes(this.app.make('config').get('server.maxBodySize'));
 
-    if (length > MAX_BYTES) {
+    if (length > max) {
       return this.app.make('errors').respond(request, 413);
     }
 

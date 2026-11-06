@@ -11,7 +11,7 @@ Taand renders styled HTML error pages for web requests. API routes (`/api/*`) an
 | **403** | Wrong role or permission |
 | **404** | Route not found |
 | **405** | Wrong HTTP method |
-| **413** | Request body over 1 MB |
+| **413** | Request body over `server.maxBodySize` (10 MB default) |
 | **419** | CSRF token mismatch / expired page |
 | **429** | Rate limit exceeded |
 | **500** | Unhandled server error (production) |

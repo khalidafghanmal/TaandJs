@@ -72,6 +72,7 @@ npm run dev            # Dev server with hot reload
 | `TAAND_SERVER_PORT` | `8000` | Production port (separate from dev `TAAND_PORT`) |
 | `TAAND_OPEN_BROWSER` | `true` (local) / `false` (production) | Open browser on start |
 | `TAAND_SERVER_TIMEOUT` | `30000` | Per-request timeout (ms) |
+| `TAAND_MAX_BODY_SIZE` | `10485760` | Max request body in bytes (raise for audio/video uploads) |
 | `TAAND_KEEP_ALIVE_TIMEOUT` | `65000` | HTTP keep-alive (ms) |
 | `TAAND_HEADERS_TIMEOUT` | `66000` | Headers timeout (ms) |
 | `TAAND_MAX_CONNECTIONS` | `1000` | Max concurrent connections |

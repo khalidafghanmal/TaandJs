@@ -28,7 +28,7 @@ export default {
     },
     413: {
       title: 'Payload Too Large',
-      message: 'The request body exceeds the maximum allowed size (1 MB).',
+      message: 'The request body exceeds the maximum allowed size.',
       hint: 'Try uploading a smaller file or splitting the request.',
     },
     422: {

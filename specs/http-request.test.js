@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Request } from '../engine/http/Request.js';
-import { req, reqBody } from './helpers/setup.js';
+import { ValidatePostSize } from '../engine/middleware/global/ValidatePostSize.js';
+import { Response } from '../engine/http/Response.js';
+import { req, reqBody, miniApp } from './helpers/setup.js';
 
 test('request path from url', () => {
   assert.equal(req('/users?page=1').path, '/users');
@@ -114,4 +116,51 @@ test('request GET has empty body', () => {
 test('request input priority form over query', async () => {
   const r = await reqBody('POST', '/?name=query', { name: 'form' }, 'application/x-www-form-urlencoded');
   assert.equal(r.input('name'), 'form');
+});
+
+function streamRaw(chunks, headers = {}) {
+  let destroyed = false;
+  return {
+    method: 'POST',
+    url: '/upload',
+    headers: { host: 'localhost', 'content-type': 'application/octet-stream', ...headers },
+    on(ev, fn) {
+      if (ev === 'data') chunks.forEach((c) => fn(c));
+      if (ev === 'end') fn();
+      return this;
+    },
+    destroy() { destroyed = true; },
+    get destroyed() { return destroyed; },
+  };
+}
+
+test('request body limit is configurable and allows uploads over 1 MiB', async () => {
+  const twoMiB = Buffer.alloc(2 * 1024 * 1024, 1);
+  const r = await Request.from(streamRaw([twoMiB]), { maxBodySize: 5 * 1024 * 1024 });
+  assert.equal(r.rawBody.length, twoMiB.length);
+});
+
+test('request body over the limit rejects with 413 without destroying the socket', async () => {
+  const raw = streamRaw([Buffer.alloc(600), Buffer.alloc(600)]);
+  await assert.rejects(() => Request.from(raw, { maxBodySize: 1000 }), (err) => err.status === 413);
+  assert.equal(raw.destroyed, false);
+});
+
+test('request body over the limit by content-length is rejected before reading', async () => {
+  let read = false;
+  const raw = streamRaw([], { 'content-length': '5000' });
+  const on = raw.on;
+  raw.on = (ev, fn) => { if (ev === 'data') read = true; return on.call(raw, ev, fn); };
+  await assert.rejects(() => Request.from(raw, { maxBodySize: 1000 }), (err) => err.status === 413);
+  assert.equal(read, false);
+});
+
+test('ValidatePostSize uses the configured server.maxBodySize', async () => {
+  const { app } = miniApp({ config: { server: { maxBodySize: 4 * 1024 * 1024 } } });
+  const mw = new ValidatePostSize(app);
+  const ok = async () => Response.text('ok');
+  const at = (bytes) => req('/upload', { method: 'POST', headers: { 'content-length': String(bytes) } });
+
+  assert.equal((await mw.handle(at(2 * 1024 * 1024), ok)).status, 200);
+  assert.equal((await mw.handle(at(5 * 1024 * 1024), ok)).status, 413);
 });

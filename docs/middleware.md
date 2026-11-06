@@ -65,7 +65,7 @@ export default {
 | Name | Usage | What it does |
 |------|-------|--------------|
 | `trustProxies` | Global | Real client IP from `X-Forwarded-For` |
-| `validateSize` | Global | Rejects bodies over 1 MB (413) |
+| `validateSize` | Global | Rejects bodies over `server.maxBodySize` (413) |
 | `trim` | Global | Trims all string input |
 | `log` | Global | Logs method, path, status, duration |
 | `security` | Global | CSP, COOP, Permissions-Policy headers |
@@ -344,7 +344,7 @@ Built-in `log`, `security`, and `throttle` use terminable hooks.
 | Feature | Detail |
 |---------|--------|
 | CSRF | Double-submit cookie pattern |
-| Body limit | 1 MB global cap |
+| Body limit | `TAAND_MAX_BODY_SIZE` (10 MB default) |
 | Rate limiting | In-memory, no Redis required |
 | Security headers | On every response |
 | Role gate | Explicit per-route — `role:admin` |

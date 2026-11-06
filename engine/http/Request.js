@@ -1,7 +1,13 @@
 import { URL } from 'node:url';
 import { HttpError } from './HttpError.js';
 
-const MAX_BODY_BYTES = 1_048_576;
+/** Default for settings/server.js maxBodySize (TAAND_MAX_BODY_SIZE). */
+export const DEFAULT_MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+/** Configured body limit, falling back to the default when unset or invalid. */
+export function maxBodyBytes(value) {
+  return Number(value) > 0 ? Number(value) : DEFAULT_MAX_BODY_BYTES;
+}
 
 /**
  * HTTP request — method, path, query, params, body, JSON input.
@@ -25,28 +31,37 @@ export class Request {
     this.#url = new URL(raw.url ?? '/', `http://${host}`);
   }
 
-  static async from(raw) {
+  static async from(raw, { maxBodySize } = {}) {
     const method = (raw.method ?? 'GET').toUpperCase();
-    const buffer = await Request.#readBodyBuffer(raw, method);
+    const buffer = await Request.#readBodyBuffer(raw, method, maxBodyBytes(maxBodySize));
     const request = new Request(raw);
     request.#bodyBuffer = buffer;
     request.#body = Request.#bufferToText(buffer, raw.headers['content-type']);
     return request;
   }
 
-  static #readBodyBuffer(raw, method) {
+  static #readBodyBuffer(raw, method, maxBytes) {
     if (method === 'GET' || method === 'HEAD') {
       return Promise.resolve(Buffer.alloc(0));
     }
 
-    return new Promise((resolve, reject) => {
-      const chunks = [];
-      let size = 0;
+    if (Number(raw.headers['content-length']) > maxBytes) {
+      return Promise.reject(HttpError.payloadTooLarge());
+    }
 
+    return new Promise((resolve, reject) => {
+      let chunks = [];
+      let size = 0;
+      let tooLarge = false;
+
+      // On overflow stop buffering but keep the socket open so the 413 can be written;
+      // Node discards the rest of the body once the response finishes.
       raw.on('data', (chunk) => {
+        if (tooLarge) return;
         size += chunk.length;
-        if (size > MAX_BODY_BYTES) {
-          raw.destroy();
+        if (size > maxBytes) {
+          tooLarge = true;
+          chunks = [];
           reject(HttpError.payloadTooLarge());
           return;
         }

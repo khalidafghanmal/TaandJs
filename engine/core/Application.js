@@ -161,7 +161,9 @@ export class Application extends Container {
 
   async handleRequest(rawRequest) {
     try {
-      const request = await Request.from(rawRequest);
+      const request = await Request.from(rawRequest, {
+        maxBodySize: this.make('config').get('server.maxBodySize'),
+      });
       return runWithRequest(request, () => this.make('kernel').handle(request));
     } catch (error) {
       const status = error?.status ?? 500;

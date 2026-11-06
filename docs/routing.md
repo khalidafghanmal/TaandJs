@@ -76,7 +76,7 @@ Every handler receives a `Request` with safe, parsed input:
 | `req.params` | Route parameters (`{id}`, etc.) |
 | `req.headers` | Raw Node headers |
 | `req.header(name)` | Single header (case-insensitive) |
-| `req.body` | Raw request body (max 1 MB) |
+| `req.body` | Raw request body (max `TAAND_MAX_BODY_SIZE`, 10 MB default) |
 | `req.json()` | Parsed JSON body (`application/json` only) |
 | `req.form()` | Parsed form body (`application/x-www-form-urlencoded`) |
 | `req.input(key, fallback)` | JSON → form → query → route param (first match) |
@@ -206,7 +206,7 @@ Example: `POST /` when only `GET /` is registered → `405` with `Allow: GET, HE
 
 | Measure | Detail |
 |---------|--------|
-| Body size limit | 1 MB maximum — oversized bodies are rejected |
+| Body size limit | `TAAND_MAX_BODY_SIZE` (10 MB default) — oversized bodies get 413 |
 | JSON parsing | Only when `Content-Type` is `application/json` |
 | Redirects | Relative paths only; `..` and protocol-relative URLs blocked |
 | Route patterns | `where` patterns screened for unsafe constructs |

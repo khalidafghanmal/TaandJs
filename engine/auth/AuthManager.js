@@ -195,6 +195,8 @@ class RequestAuth {
 
   async authenticateFromRemember() {
     if (this.check()) return this.#user;
+    // Already logged in via the session — re-logging in would regenerate the id and CSRF token.
+    if (this.#sessions.get(this.#session(), '_user_id')) return null;
     return this.#loadRememberUser();
   }
 
@@ -276,8 +278,9 @@ class RequestAuth {
       return null;
     }
 
+    // Rotate on every use: a stolen cookie and the real one cannot both keep working.
     const user = this.#publicUser(record);
-    await this.login(user, false);
+    await this.login(user, true);
     return user;
   }
 
@@ -288,8 +291,8 @@ class RequestAuth {
     const days = this.#config().session?.rememberDays ?? 14;
     const config = this.#config().remember ?? {};
     const cookieName = config.cookie ?? 'taand_remember';
-    const payload = this.#signRemember({ userId: user.id, token });
     const maxAge = days * 24 * 60 * 60;
+    const payload = this.#signRemember({ userId: user.id, token, exp: Date.now() + maxAge * 1000 });
 
     const parts = [
       `${cookieName}=${payload}`,
@@ -331,6 +334,8 @@ class RequestAuth {
     try {
       const json = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
       if (!json?.userId || !json?.token) return null;
+      // Expiry is signed, so it holds even if the client keeps the cookie past Max-Age.
+      if (!(Number(json.exp) > Date.now())) return null;
       return { userId: Number(json.userId), token: String(json.token) };
     } catch {
       return null;

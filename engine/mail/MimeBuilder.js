@@ -24,6 +24,23 @@ export class MimeBuilder {
     return `${headers}\r\n${body}`;
   }
 
+  // 7bit is only safe for ASCII with lines under SMTP's 998-octet limit; anything else goes base64 (RFC 2045).
+  static #needsBase64(text) {
+    return /[^\x00-\x7f]|[^\r\n]{999}/.test(String(text ?? ''));
+  }
+
+  static #textHeaders(type, text) {
+    const headers = [`Content-Type: ${type}; charset=UTF-8`];
+    if (MimeBuilder.#needsBase64(text)) headers.push('Content-Transfer-Encoding: base64');
+    return headers;
+  }
+
+  static #encodeText(text) {
+    const value = String(text ?? '');
+    if (!MimeBuilder.#needsBase64(value)) return value;
+    return Buffer.from(value).toString('base64').replace(/.{76}(?=.)/g, '$&\r\n');
+  }
+
   #buildHeaders(message) {
     const lines = [
       `From: ${MailValidator.formatAddress(message.from)}`,
@@ -50,10 +67,8 @@ export class MimeBuilder {
       lines.push(`Content-Type: multipart/mixed; boundary="${this.#mixedBoundary}"`);
     } else if (message.html && message.text) {
       lines.push(`Content-Type: multipart/alternative; boundary="${this.#boundary}"`);
-    } else if (message.html) {
-      lines.push(`Content-Type: text/html; charset=UTF-8`);
     } else {
-      lines.push(`Content-Type: text/plain; charset=UTF-8`);
+      lines.push(...MimeBuilder.#textHeaders(message.html ? 'text/html' : 'text/plain', message.html || message.text));
     }
 
     return lines.join('\r\n');
@@ -64,7 +79,7 @@ export class MimeBuilder {
       `--${this.#mixedBoundary}`,
       `Content-Type: multipart/alternative; boundary="${this.#boundary}"`,
       '',
-      this.#buildBody(message, false),
+      this.#buildBody(message),
     ];
 
     for (const file of message.attachments) {
@@ -84,39 +99,21 @@ export class MimeBuilder {
     return parts.join('\r\n');
   }
 
-  #buildBody(message, includeHeaders = true) {
-    if (message.html && message.text) {
-      const parts = [];
-      if (includeHeaders) return this.#multipartAlternative(message);
-
-      parts.push(
-        `--${this.#boundary}`,
-        `Content-Type: text/plain; charset=UTF-8`,
-        '',
-        message.text,
-        `--${this.#boundary}`,
-        `Content-Type: text/html; charset=UTF-8`,
-        '',
-        message.html,
-        `--${this.#boundary}--`,
-      );
-      return parts.join('\r\n');
-    }
-
-    if (message.html) return message.html;
-    return message.text ?? '';
+  #buildBody(message) {
+    if (message.html && message.text) return this.#multipartAlternative(message);
+    return MimeBuilder.#encodeText(message.html || message.text);
   }
 
   #multipartAlternative(message) {
     return [
       `--${this.#boundary}`,
-      `Content-Type: text/plain; charset=UTF-8`,
+      ...MimeBuilder.#textHeaders('text/plain', message.text),
       '',
-      message.text ?? '',
+      MimeBuilder.#encodeText(message.text),
       `--${this.#boundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
+      ...MimeBuilder.#textHeaders('text/html', message.html),
       '',
-      message.html ?? '',
+      MimeBuilder.#encodeText(message.html),
       `--${this.#boundary}--`,
     ].join('\r\n');
   }

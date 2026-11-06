@@ -189,7 +189,7 @@ export class CacheDashboard {
     </div>
 
     <div class="actions">
-      <a class="btn btn-danger" href="/__Taand/cache/flush?store=${encodeURIComponent(activeStore)}" onclick="return confirm('Flush ${escapeHtml(activeStore)} store?')">Flush store</a>
+      <a class="btn btn-danger" href="/__Taand/cache/flush?store=${encodeURIComponent(activeStore)}" data-store="${escapeHtml(activeStore)}" onclick="return confirm('Flush ' + this.dataset.store + ' store?')">Flush store</a>
       <a class="btn btn-danger" href="/__Taand/cache/flush" onclick="return confirm('Flush ALL stores?')">Flush all</a>
       <a class="btn btn-ghost" href="/">← Back to app</a>
     </div>

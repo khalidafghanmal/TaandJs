@@ -74,7 +74,7 @@ export class MimeBuilder {
         `--${this.#mixedBoundary}`,
         `Content-Type: ${file.mime ?? 'application/octet-stream'}`,
         `Content-Transfer-Encoding: base64`,
-        `Content-Disposition: attachment; filename="${filename}"`,
+        `Content-Disposition: attachment; ${MimeBuilder.#filenameParams(filename)}`,
         '',
         content.toString('base64'),
       );
@@ -119,5 +119,15 @@ export class MimeBuilder {
       message.html ?? '',
       `--${this.#boundary}--`,
     ].join('\r\n');
+  }
+
+  // Escaped quoted-string filename (RFC 2183); non-ASCII names add an RFC 2231 filename* with an ASCII fallback.
+  static #filenameParams(name) {
+    const quoted = (value) => `"${value.replace(/[\\"]/g, '\\$&')}"`;
+    if (!/[^\x20-\x7e]/.test(name)) return `filename=${quoted(name)}`;
+
+    const fallback = name.replace(/[^\x20-\x7e]/gu, '_');
+    const encoded = encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+    return `filename=${quoted(fallback)}; filename*=UTF-8''${encoded}`;
   }
 }

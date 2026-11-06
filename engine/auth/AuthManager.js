@@ -143,6 +143,7 @@ class RequestAuth {
   async login(user, remember = false) {
     const session = this.#session();
     this.#sessions.regenerate(session);
+    this.#rotateCsrf(session);
     this.#sessions.put(session, '_user_id', user.id);
     this.#user = user;
     this.request.setAttribute('_user', user);
@@ -162,7 +163,13 @@ class RequestAuth {
       await this.#users.updateRememberToken(userId, null);
     }
 
-    this.#sessions.forget(session, '_user_id');
+    // Invalidate: drop all session data under a fresh id so the old cookie is useless.
+    for (const key of Object.keys(this.#sessions.read(session))) {
+      this.#sessions.forget(session, key);
+    }
+    this.#sessions.regenerate(session);
+    this.#rotateCsrf(session);
+
     this.#user = null;
     this.request.setAttribute('_user', null);
     this.#clearRememberCookie();
@@ -195,6 +202,8 @@ class RequestAuth {
 
   async authenticateFromRemember() {
     if (this.check()) return this.#user;
+    // Already logged in via the session — re-logging in would regenerate the id and CSRF token.
+    if (this.#sessions.get(this.#session(), '_user_id')) return null;
     return this.#loadRememberUser();
   }
 
@@ -205,6 +214,10 @@ class RequestAuth {
     if (key in old) return old[key];
     if (current !== null) return current;
     return fallback;
+  }
+
+  #rotateCsrf(session) {
+    this.#sessions.put(session, '_csrf', crypto.randomBytes(32).toString('hex'));
   }
 
   #session() {

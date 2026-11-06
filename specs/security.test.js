@@ -284,3 +284,29 @@ test('can fails closed without authenticated user', async () => {
   assert.equal(await can('admin'), false);
   await assert.rejects(() => authorize('admin'), (err) => err.status === 403);
 });
+
+test('CsrfProtection reissues the cookie after a token rotated during a POST', async () => {
+  const sessions = {
+    store: { _csrf: 'old-token' },
+    get(_s, key) { return this.store[key]; },
+    put(_s, key, val) { this.store[key] = val; },
+  };
+  const { app } = miniApp({ session: sessions });
+  const mw = new CsrfProtection(app);
+  const request = await reqBody(
+    'POST',
+    '/logout',
+    { _token: 'old-token' },
+    'application/x-www-form-urlencoded',
+    { cookie: 'XSRF-TOKEN=old-token' },
+  );
+  request.setAttribute('_session', 'sess1');
+
+  const res = await mw.handle(request, async () => {
+    sessions.store._csrf = 'rotated-token';
+    return Response.json({ ok: true });
+  });
+  await mw.terminate(request, res);
+
+  assert.ok(res.headers['Set-Cookie'].some((c) => c.startsWith('XSRF-TOKEN=rotated-token;')));
+});

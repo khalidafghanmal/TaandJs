@@ -25,7 +25,7 @@ export class CsrfProtection extends Middleware {
   }
 
   async terminate(request, response) {
-    if (!(response instanceof Response) || MUTATING.has(request.method)) return;
+    if (!(response instanceof Response)) return;
 
     const token = this.#token(request);
     Response.appendCookie(response, `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict`);

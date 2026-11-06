@@ -41,9 +41,9 @@ export default {
 
   hashing: {
     scrypt: {
-      N: 16384,
+      N: 32768,
       r: 8,
-      p: 1,
+      p: 3,
       keyLength: 64,
     },
   },

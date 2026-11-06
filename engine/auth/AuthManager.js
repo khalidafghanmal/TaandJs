@@ -129,12 +129,16 @@ class RequestAuth {
 
     const record = await this.#users.findByEmail(email);
     if (!record) {
-      await this.#hasher.verify(password, '$scrypt$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+      await this.#hasher.verify(password, this.#hasher.dummyHash);
       return false;
     }
 
     const valid = await this.#hasher.verify(password, record.passwordHash);
     if (!valid) return false;
+
+    if (this.#hasher.needsRehash(record.passwordHash) && typeof this.#users.updatePassword === 'function') {
+      await this.#users.updatePassword(record.id, await this.#hasher.hash(password));
+    }
 
     await this.login(this.#publicUser(record), remember);
     return true;

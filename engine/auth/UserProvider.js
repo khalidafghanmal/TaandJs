@@ -37,6 +37,13 @@ export class UserProvider {
     return this.#sanitize(user);
   }
 
+  async updatePassword(userId, passwordHash) {
+    await this.app.make('db').user.update({
+      where: { id: userId },
+      data: { password: passwordHash },
+    });
+  }
+
   async updateRememberToken(userId, token) {
     await this.app.make('db').user.update({
       where: { id: userId },

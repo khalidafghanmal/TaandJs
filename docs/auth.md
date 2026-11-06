@@ -265,7 +265,7 @@ gate.policy('Post', PostPolicy);
 
 | Measure | Implementation |
 |---------|----------------|
-| Password storage | scrypt with 16 KB memory cost |
+| Password storage | scrypt N=2^15, r=8, p=3 (OWASP); older hashes are upgraded on login |
 | Timing attacks | Constant-time compare on tokens/passwords |
 | Session fixation | Session ID regenerated on login |
 | Session cookie | HttpOnly, Signed (HMAC-SHA256), SameSite |

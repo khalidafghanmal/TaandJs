@@ -7,7 +7,8 @@ import { HttpError } from '../engine/http/HttpError.js';
 import { LockoutRequests } from '../engine/middleware/LockoutRequests.js';
 import { CacheManager } from '../engine/cache/CacheManager.js';
 import { RateLimiter } from '../engine/http/RateLimiter.js';
-import { miniApp, req } from './helpers/setup.js';
+import { ValidationError } from '../engine/validation/ValidationError.js';
+import { miniApp, req, reqBody } from './helpers/setup.js';
 
 test('Pipeline rethrows when exceptions handler is missing', async () => {
   const { pipeline } = miniApp();
@@ -73,4 +74,31 @@ test('Pipeline still runs terminate on success', async () => {
 
   await terminate();
   assert.equal(terminated, true);
+});
+
+async function flashedOld(config = {}) {
+  const flashed = {};
+  const session = { flash: (_s, key, value) => { flashed[key] = value; } };
+  const { app } = miniApp({ session, config });
+  const exceptions = new ExceptionHandler(app);
+  const request = await reqBody('POST', '/register', {
+    email: 'a@b.c',
+    password: 'hunter2',
+    password_confirmation: 'hunter2',
+    current_password: 'old-secret',
+  }, 'application/x-www-form-urlencoded');
+  request.setAttribute('_session', {});
+
+  const response = await exceptions.render(new ValidationError({ email: ['taken'] }), request);
+  assert.equal(response.status, 302);
+  return flashed.old;
+}
+
+test('ExceptionHandler does not flash passwords into the session on validation failure', async () => {
+  assert.deepEqual(await flashedOld(), { email: 'a@b.c' });
+});
+
+test('ExceptionHandler dontFlash list is configurable', async () => {
+  const old = await flashedOld({ validation: { dontFlash: ['email'] } });
+  assert.deepEqual(old, { password: 'hunter2', password_confirmation: 'hunter2', current_password: 'old-secret' });
 });

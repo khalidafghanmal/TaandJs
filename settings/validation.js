@@ -14,4 +14,7 @@ export default {
     email: 'email address',
     password: 'password',
   },
+
+  /** Inputs never flashed back as old() after a failed validation. */
+  dontFlash: ['current_password', 'password', 'password_confirmation'],
 };

@@ -4,6 +4,9 @@ import { HaltError, formatHaltPayload } from '../support/Debug.js';
 import { safeBack } from '../support/SafeBack.js';
 import { renderOverlayPage, serializeError } from '../dev/ErrorOverlay.js';
 
+/** Inputs never flashed back into the session as old() values (config: validation.dontFlash). */
+const DONT_FLASH = ['current_password', 'password', 'password_confirmation'];
+
 /**
  * Central exception handler — Taand's Illuminate\Foundation\Exceptions\Handler.
  */
@@ -125,7 +128,11 @@ export class ExceptionHandler {
     if (session) {
       const store = this.app.make('session');
       store.flash(session, 'errors', error.errors);
-      store.flash(session, 'old', request.all());
+      const dontFlash = this.app.make('config').get('validation.dontFlash', DONT_FLASH);
+      const old = Object.fromEntries(
+        Object.entries(request.all()).filter(([key]) => !dontFlash.includes(key)),
+      );
+      store.flash(session, 'old', old);
     }
 
     return safeBack(request, '/');

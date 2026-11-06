@@ -185,7 +185,7 @@ export class Router {
         return Router.#wrap(await run(req));
       }
 
-      return await pipeline.send(req, route.middlewareStack, run, [], route.withoutMiddleware);
+      return await pipeline.send(req, route.middlewareStack, run, [], route.excludedMiddleware);
     } finally {
       request.mergeFrom(req);
     }

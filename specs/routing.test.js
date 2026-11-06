@@ -238,3 +238,23 @@ test('async handler is awaited', async () => {
   const res = await dispatch(r, req('/async'));
   assert.deepEqual(body(res), { async: true });
 });
+
+test('fluent withoutMiddleware skips middleware for that route', async () => {
+  const log = [];
+  const { router, middleware } = miniApp();
+  middleware.register('test', class extends Middleware {
+    async handle(request, next) {
+      log.push('mw');
+      return next(request);
+    }
+  });
+  router.group({ middleware: ['test'] }, () => {
+    router.get('/with', () => ({ ok: true }));
+    router.get('/without', () => ({ ok: true })).withoutMiddleware('test');
+  });
+
+  await dispatch(router, req('/with'));
+  const res = await dispatch(router, req('/without'));
+  assert.equal(res.status, 200);
+  assert.deepEqual(log, ['mw']);
+});

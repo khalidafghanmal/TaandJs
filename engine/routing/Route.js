@@ -9,7 +9,7 @@ export class Route {
     this.uri = Route.normalizeUri(uri);
     this.action = action;
     this.middlewareStack = [...middleware];
-    this.withoutMiddleware = [...withoutMiddleware];
+    this.excludedMiddleware = [...withoutMiddleware];
     this.routeName = null;
     this.namePrefix = namePrefix;
     this.wheres = {};
@@ -115,7 +115,7 @@ export class Route {
   }
 
   withoutMiddleware(...names) {
-    this.withoutMiddleware.push(...names.flat());
+    this.excludedMiddleware.push(...names.flat());
     return this;
   }
 

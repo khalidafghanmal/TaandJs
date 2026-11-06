@@ -72,7 +72,8 @@ export class FileWatcher {
   }
 
   #shouldIgnore(filePath) {
-    const parts = filePath.split(path.sep);
+    // Only segments inside the project count — a parent dir like D:/storage/apps must not match.
+    const parts = path.relative(this.#basePath, filePath).split(path.sep);
     return parts.some((part) => IGNORED.has(part));
   }
 }

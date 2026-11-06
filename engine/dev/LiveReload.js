@@ -48,6 +48,7 @@ export class LiveReload {
         ProjectPaths.routes,
         ProjectPaths.settings,
         ProjectPaths.controllers,
+        ProjectPaths.modules,
       ],
       onChange: (file) => this.#handleChange(file),
     });
@@ -157,6 +158,13 @@ export class LiveReload {
       } else if (relative.startsWith(`${ProjectPaths.controllers}/`)) {
         this.app.make('controllers').flush();
         this.#log('actions', relative);
+      } else if (relative.startsWith(`${ProjectPaths.modules}/`)) {
+        if (path.basename(relative) === 'routes.js') {
+          await this.app.reloadRoutes();
+        } else {
+          this.app.make('controllers').flush();
+        }
+        this.#log('features', relative);
       } else {
         return;
       }

@@ -165,21 +165,19 @@ export class PersonalAccessTokenManager {
     return { id, secret };
   }
 
+  // Anything other than an explicit ability list fails closed — [] means "no abilities".
   static #normalizeAbilities(abilities) {
-    if (abilities === '*') return ['*'];
     if (typeof abilities === 'string') return [abilities];
-    if (Array.isArray(abilities) && abilities.length) {
-      return abilities.map(String);
-    }
-    return ['*'];
+    if (Array.isArray(abilities)) return abilities.map(String);
+    return [];
   }
 
   static #parseAbilities(raw) {
     if (Array.isArray(raw)) return raw;
-    if (typeof raw !== 'string' || !raw) return ['*'];
+    if (typeof raw !== 'string' || !raw) return [];
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) && parsed.length ? parsed.map(String) : ['*'];
+      return Array.isArray(parsed) ? parsed.map(String) : [];
     } catch {
       return [raw];
     }

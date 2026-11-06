@@ -244,3 +244,57 @@ test('tokenCan respects token abilities', async () => {
   assert.equal(tokens.tokenCan({ abilities: ['profile.edit'] }, 'content.manage'), false);
   assert.equal(tokens.tokenCan({ abilities: ['*'] }, 'anything'), true);
 });
+
+test('token created with an empty ability list grants nothing', async () => {
+  const { db, rows } = mockTokenDb();
+  const { tokens } = tokenApp(db);
+
+  const created = await tokens.create(1, 'read-nothing', []);
+  assert.deepEqual(created.abilities, []);
+  assert.equal(rows.get(created.id).abilities, '[]');
+
+  const match = await tokens.findUserByCredential(created.plainTextToken);
+  assert.deepEqual(match.token.abilities, []);
+  assert.equal(tokens.tokenCan(match.token, 'profile.edit'), false);
+
+  const [listed] = await tokens.listForUser(1);
+  assert.deepEqual(listed.abilities, []);
+});
+
+test('stored empty or null abilities fail closed', async () => {
+  const { db, rows } = mockTokenDb();
+  const { tokens } = tokenApp(db);
+
+  for (const stored of ['[]', '', null]) {
+    const created = await tokens.create(1, 'legacy', ['profile.edit']);
+    rows.get(created.id).abilities = stored;
+    const match = await tokens.findUserByCredential(created.plainTextToken);
+    assert.equal(tokens.tokenCan(match.token, 'anything'), false, `stored=${JSON.stringify(stored)}`);
+  }
+});
+
+test('token abilities default to * only when omitted', async () => {
+  const { db } = mockTokenDb();
+  const { tokens } = tokenApp(db);
+
+  assert.deepEqual((await tokens.create(1, 'omitted')).abilities, ['*']);
+  assert.deepEqual((await tokens.create(1, 'explicit-undefined', undefined)).abilities, ['*']);
+  assert.deepEqual((await tokens.create(1, 'null', null)).abilities, []);
+});
+
+test('machine token with an empty ability list grants nothing', async () => {
+  const { db } = mockTokenDb();
+  const { app } = tokenApp(db, {
+    tokens: { fallback: 'machine-secret', machineAbilities: [] },
+  });
+
+  const request = req('/api/health', {
+    headers: { authorization: 'Bearer machine-secret' },
+  });
+
+  const auth = app.make('auth').forRequest(request).guard('api');
+  await auth.loadUser();
+
+  assert.deepEqual(auth.accessToken().abilities, []);
+  assert.equal(auth.tokenCan('anything'), false);
+});

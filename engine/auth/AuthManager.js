@@ -249,7 +249,7 @@ class RequestAuth {
       return null;
     }
 
-    const abilities = config.machineAbilities?.length ? config.machineAbilities : ['*'];
+    const abilities = config.machineAbilities ?? ['*'];
     this.#accessToken = { name: 'machine', abilities, machine: true };
     this.#user = { guard: 'api', machine: true, token: 'machine' };
     this.request.setAttribute('_user', this.#user);

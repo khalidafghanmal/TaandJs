@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { ProjectPaths } from '../../core/ProjectPaths.js';
 
 /**
  * Local filesystem storage driver.
@@ -7,7 +8,7 @@ import path from 'node:path';
 export class LocalDriver {
   constructor(app, config) {
     this.app = app;
-    this.#root = path.join(app.basePath, config.root ?? 'var/uploads');
+    this.#root = path.join(app.basePath, config.root ?? ProjectPaths.varUploads);
     this.#url = config.url ?? '/storage';
     this.#visibility = config.visibility ?? 'public';
     fs.mkdirSync(this.#root, { recursive: true });

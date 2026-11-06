@@ -17,6 +17,7 @@ var/cache/data/*
 var/sessions/*
 var/uploads/*
 !var/uploads/.gitignore
+storage/uploads/*
 var/cli-cache/*
 var/mail/outbox/*
 

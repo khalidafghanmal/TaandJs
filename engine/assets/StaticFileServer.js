@@ -14,7 +14,7 @@ const STATIC_EXT = new Set([
 ]);
 
 /**
- * Serves web/ and storage/app/web/ with security headers.
+ * Serves web/ and storage/uploads/ with security headers.
  */
 export class StaticFileServer {
   constructor(app) {

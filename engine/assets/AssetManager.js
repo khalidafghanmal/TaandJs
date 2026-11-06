@@ -5,14 +5,14 @@ import crypto from 'node:crypto';
 /**
  * Asset URLs — Taand asset() and storage() helpers.
  */
-import { inProject, publicDir } from '../core/ProjectPaths.js';
+import { ProjectPaths, inProject, publicDir } from '../core/ProjectPaths.js';
 
 export class AssetManager {
   constructor(app) {
     this.app = app;
     this.#basePath = app.basePath;
     this.#publicDir = publicDir(app.basePath);
-    this.#storageDir = inProject(app.basePath, 'var', 'uploads');
+    this.#storageDir = inProject(app.basePath, ProjectPaths.varUploads);
   }
 
   #basePath;
@@ -53,7 +53,7 @@ export class AssetManager {
   }
 
   /**
-   * Uploaded file URL — files in storage/app/web/
+   * Uploaded file URL — files in storage/uploads/
    *   storage('uploads/photo.jpg') → /storage/uploads/photo.jpg
    */
   storageUrl(relativePath) {

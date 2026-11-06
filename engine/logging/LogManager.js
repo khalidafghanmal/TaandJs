@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { LogChannel } from './LogChannel.js';
 import { LogSanitizer } from './LogSanitizer.js';
 import { LogFormatter } from './LogFormatter.js';
@@ -21,7 +22,7 @@ export class LogManager {
     );
     this.#formatter = new LogFormatter();
     this.#defaultChannel = app.make('config').get('logging.default', 'stack');
-    this.#requestContext = {};
+    this.#requestContext = new AsyncLocalStorage();
   }
 
   #channels;
@@ -38,19 +39,14 @@ export class LogManager {
     return this.#channels.get(resolved);
   }
 
+  /** Scoped to the current async execution, so concurrent requests keep their own context. */
   setRequestContext(context) {
-    this.#requestContext = { ...context };
-    for (const channel of this.#channels.values()) {
-      channel.mergeContext(context);
-    }
+    this.#requestContext.enterWith({ ...context });
     return this;
   }
 
   clearRequestContext() {
-    this.#requestContext = {};
-    for (const channel of this.#channels.values()) {
-      channel.clearContext();
-    }
+    this.#requestContext.enterWith({});
     return this;
   }
 
@@ -66,8 +62,8 @@ export class LogManager {
       level: config.level ?? this.app.make('config').get('logging.level', 'debug'),
       sanitizer: this.#sanitizer,
       formatter: this.#formatter,
+      requestContext: () => this.#requestContext.getStore(),
     });
-    channel.mergeContext(this.#requestContext);
     return channel;
   }
 

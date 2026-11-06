@@ -8,11 +8,7 @@ export class LogRequest extends Middleware {
     request.setAttribute('_startedAt', Date.now());
 
     if (this.app.has('log')) {
-      this.app.make('log').setRequestContext({
-        ip: request.ip(),
-        method: request.method,
-        path: request.path,
-      });
+      this.app.make('log').setRequestContext(LogRequest.#context(request));
     } else {
       const time = new Date().toISOString();
       console.log(`  ${time}  ${request.method} ${request.path}`);
@@ -26,6 +22,8 @@ export class LogRequest extends Middleware {
 
     if (this.app.has('log')) {
       const log = this.app.make('log');
+      // terminate() runs after the request's async context has ended, so set it again.
+      log.setRequestContext(LogRequest.#context(request));
       log.info('Request completed', { status: response.status, ms });
       log.clearRequestContext();
       return;
@@ -33,5 +31,9 @@ export class LogRequest extends Middleware {
 
     if (process.env.TAAND_ENV === 'production') return;
     console.log(`  → ${response.status} (${ms}ms)`);
+  }
+
+  static #context(request) {
+    return { ip: request.ip(), method: request.method, path: request.path };
   }
 }

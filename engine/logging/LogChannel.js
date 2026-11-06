@@ -4,12 +4,13 @@ import { shouldLog } from './LogLevel.js';
  * A single log channel — filters by level and writes through a driver.
  */
 export class LogChannel {
-  constructor(name, driver, { level = 'debug', sanitizer, formatter } = {}) {
+  constructor(name, driver, { level = 'debug', sanitizer, formatter, requestContext } = {}) {
     this.name = name;
     this.#driver = driver;
     this.#level = level;
     this.#sanitizer = sanitizer;
     this.#formatter = formatter;
+    this.#requestContext = requestContext;
     this.#context = {};
   }
 
@@ -17,6 +18,7 @@ export class LogChannel {
   #level;
   #sanitizer;
   #formatter;
+  #requestContext;
   #context;
 
   setContext(context) {
@@ -47,7 +49,7 @@ export class LogChannel {
     if (!shouldLog(level, this.#level)) return;
 
     const rawError = context.error;
-    const merged = this.#sanitizer.sanitize({ ...this.#context, ...context });
+    const merged = this.#sanitizer.sanitize({ ...this.#context, ...this.#requestContext?.(), ...context });
     const error = rawError instanceof Error
       ? this.#sanitizer.sanitize(rawError)
       : undefined;

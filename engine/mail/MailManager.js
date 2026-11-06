@@ -44,6 +44,17 @@ export class MailManager {
   }
 
   async sendMessage(message, mailer = null) {
+    // Plain-object messages skip MailMessage validation; every address reaches headers and SMTP commands.
+    const parse = (address) => MailValidator.parseAddress(address);
+    message = {
+      ...message,
+      from: parse(message.from),
+      to: (message.to ?? []).map(parse),
+      cc: (message.cc ?? []).map(parse),
+      bcc: (message.bcc ?? []).map(parse),
+      replyTo: message.replyTo ? parse(message.replyTo) : message.replyTo,
+    };
+
     await this.#checkRateLimit();
     await this.#fire('mail.sending', { message, mailer: mailer ?? this.#default });
 

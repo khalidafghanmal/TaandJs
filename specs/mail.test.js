@@ -66,3 +66,37 @@ test('mail rejects invalid input', async () => {
   const { mail } = mailApp();
   await assert.rejects(() => mail.resolve({}), /Invalid mailable/);
 });
+
+test('mail rejects CR/LF header injection in plain-object message addresses', async () => {
+  const { mail } = mailApp();
+  const base = {
+    from: { email: 'app@example.com' },
+    to: [{ email: 'user@example.com' }],
+    subject: 'Hi',
+    text: 'body',
+  };
+  const injected = [
+    { to: [{ email: 'user@example.com', name: 'Bob\r\nBcc: spy@evil.test' }] },
+    { to: [{ email: 'user@example.com>\r\nBcc: <spy@evil.test' }] },
+    { from: { email: 'app@example.com', name: 'App\nX-Injected: 1' } },
+    { replyTo: { email: 'reply@example.com', name: 'R\r\nBcc: spy@evil.test' } },
+    { cc: [{ email: 'cc@example.com\nBcc: spy@evil.test' }] },
+  ];
+
+  for (const override of injected) {
+    await assert.rejects(() => mail.send({ ...base, ...override }, 'array'), /injection|Invalid email/);
+  }
+  assert.equal(mail.sent('array').length, 0);
+});
+
+test('mail rejects CR/LF in attachment content type', async () => {
+  const { app, mail } = mailApp();
+  const message = MailMessage.make(app)
+    .to('user@example.com')
+    .subject('Report')
+    .text('see attached')
+    .attach('package.json', { mime: 'text/plain\r\nX-Injected: 1' });
+
+  await assert.rejects(() => mail.send(message, 'array'), /injection/);
+  assert.equal(mail.sent('array').length, 0);
+});

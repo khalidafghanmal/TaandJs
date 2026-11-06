@@ -72,7 +72,7 @@ export class MimeBuilder {
       const filename = MailValidator.sanitizeHeader(file.name ?? path.basename(file.path), 'filename');
       parts.push(
         `--${this.#mixedBoundary}`,
-        `Content-Type: ${file.mime ?? 'application/octet-stream'}`,
+        `Content-Type: ${MailValidator.sanitizeHeader(file.mime, 'mime') || 'application/octet-stream'}`,
         `Content-Transfer-Encoding: base64`,
         `Content-Disposition: attachment; filename="${filename}"`,
         '',

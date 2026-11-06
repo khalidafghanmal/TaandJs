@@ -571,7 +571,7 @@ MAIL_PASSWORD=your-pass
 
 | Protection | Description |
 |------------|-------------|
-| **Header injection block** | CRLF in subject/headers rejected |
+| **Header injection block** | CRLF in subject, headers, addresses, and attachment types rejected |
 | **Email validation** | RFC-style address checks |
 | **Safe attachments** | Paths must be inside app directory |
 | **JSON-only** | No unsafe deserialization |

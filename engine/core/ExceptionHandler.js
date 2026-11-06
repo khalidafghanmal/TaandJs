@@ -106,7 +106,8 @@ export class ExceptionHandler {
       }
     }
 
-    return new Response(renderOverlayPage(this.#recent), status, {
+    // Only this request's error goes into the page: #recent spans every client's requests.
+    return new Response(renderOverlayPage([dto]), status, {
       'Content-Type': 'text/html; charset=utf-8',
     });
   }

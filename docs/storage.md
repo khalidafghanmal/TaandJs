@@ -6,10 +6,10 @@ taand-style **filesystem disks** — local uploads or Amazon S3 / compatible sto
 
 ## Configuration
 
-`config/filesystems.js`:
+`settings/platform.js` → `volumes` (registry key `filesystems`):
 
 ```js
-export default {
+volumes: {
   default: env('FILESYSTEM_DISK', 'local'),
   disks: {
     local: { driver: 'local', root: 'storage/uploads', url: '/storage' },
@@ -23,7 +23,7 @@ export default {
       endpoint: env('AWS_ENDPOINT'),  // MinIO, R2, etc.
     },
   },
-};
+},
 ```
 
 ### Environment (S3)
@@ -74,7 +74,7 @@ When `FILESYSTEM_DISK=s3`, uploads go to S3 automatically.
 | Taand | Taand |
 |---------|-------|
 | `Storage::disk('s3')` | `app.make('storage').disk('s3')` |
-| `config/filesystems.php` | `config/filesystems.js` |
+| `config/filesystems.php` | `settings/platform.js` → `volumes` |
 | `FILESYSTEM_DISK=s3` | Same env name |
 
 See also: [assets.md](./assets.md), [production.md](./production.md).

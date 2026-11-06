@@ -11,4 +11,4 @@ npm run satan:install
 npm run satan:uninstall
 ```
 
-See [Satan README](../../Satan/README.md).
+See the Satan README in that sibling checkout (`../Satan/README.md`).

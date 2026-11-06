@@ -64,7 +64,7 @@ export class SendWelcomeEmail extends Listener {
 Extend `Event` for structured domain events:
 
 ```js
-// src/Events/UserRegistered.js
+// src/events/UserRegistered.js
 import { Event } from '../../engine/events/Event.js';
 
 export class UserRegistered extends Event {
@@ -76,7 +76,7 @@ export class UserRegistered extends Event {
 ```
 
 ```js
-import { UserRegistered } from '../src/Events/UserRegistered.js';
+import { UserRegistered } from '../src/events/UserRegistered.js';
 
 await event(new UserRegistered(user));
 ```
@@ -258,13 +258,13 @@ if (invalid) event.halt();
 
 ## Configuration
 
-`config/events.js`:
+`settings/platform.js` → `dispatch` (registry key `events`):
 
 ```js
-export default {
+dispatch: {
   stopOnFailure: false,  // throw if a listener fails
   maxListeners: 100,     // per event
-};
+},
 ```
 
 Environment variables:

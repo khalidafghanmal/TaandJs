@@ -47,15 +47,15 @@ Browser (origin A)                    Taand server (origin B)
 
 | Piece | Location | Role |
 |-------|----------|------|
-| Config | `config/cors.js` | Paths, origins, methods, headers |
+| Config | `settings/http.js` → `crossOrigin` | Paths, origins, methods, headers |
 | Middleware | `engine/middleware/global/HandleCors.js` | Preflight + response headers |
 | Registration | `engine/providers/MiddlewareServiceProvider.js` | Registers `cors` alias |
-| Kernel stack | `config/middleware.js` | `cors` in **global** middleware (early) |
+| Kernel stack | `settings/http.js` → `global` | `cors` in **global** middleware (early) |
 
 ### Middleware lifecycle
 
 1. **Global stack runs first** — `cors` sits after `trustProxies`, before route handlers.
-2. **Path match** — only paths in `config/cors.js` → `paths` (default `api/*`) get CORS.
+2. **Path match** — only paths in `settings/http.js` → `crossOrigin.paths` (default `api/*`) get CORS.
 3. **OPTIONS preflight** — answered immediately with `204` and `Access-Control-*` headers; controller never runs.
 4. **Normal requests** — handler runs; `terminate()` adds CORS headers to the final response.
 
@@ -65,10 +65,10 @@ This mirrors Taand's `HandleCors` middleware + `config/cors.php`.
 
 ## Configuration
 
-`config/cors.js`:
+`settings/http.js` → `crossOrigin` (registry key `cors`):
 
 ```js
-export default {
+crossOrigin: {
   enabled: true,
   paths: ['api/*'],
   allowedOrigins: ['*'],           // or specific origins from CORS_ALLOWED_ORIGINS
@@ -77,7 +77,7 @@ export default {
   exposedHeaders: [],
   maxAge: 0,
   supportsCredentials: false,
-};
+},
 ```
 
 ### Environment variables
@@ -99,7 +99,7 @@ export default {
 | `*` | Every path |
 | `webhooks/stripe` | Exact path only |
 
-Add patterns in `config/cors.js` → `paths`.
+Add patterns in `settings/http.js` → `crossOrigin.paths`.
 
 ---
 
@@ -112,7 +112,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 CORS_SUPPORTS_CREDENTIALS=true
 ```
 
-And ensure `config/auth.js` → `session.secure` / `sameSite` match your setup.
+And ensure `settings/security.js` → `browser.session.secure` / `sameSite` match your setup.
 
 For **Bearer token** API auth, credentials are usually not needed.
 
@@ -128,7 +128,7 @@ CORS is global for matching paths. To exclude a path, remove it from `paths` or 
 
 | Taand | Taand |
 |---------|-------|
-| `config/cors.php` | `config/cors.js` |
+| `config/cors.php` | `settings/http.js` → `crossOrigin` |
 | `\Illuminate\Http\Middleware\HandleCors` | `engine/middleware/global/HandleCors.js` |
 | `paths` => `['api/*']` | Same pattern |
 | `supports_credentials` | `supportsCredentials` |

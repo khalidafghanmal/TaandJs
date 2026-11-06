@@ -7,7 +7,7 @@ TaandJs ships with **Prisma ORM** pre-installed — fullstack out of the box. **
 | Piece | Location |
 |-------|----------|
 | Prisma schema | `schema/schema.prisma` |
-| App config | `config/database.js` |
+| App config | `settings/data.js` → `primary` |
 | Prisma Client | `@prisma/client` (generated on install) |
 | Client singleton | `app.make('db')` or `db()` |
 | Migrations | `schema/migrations/` |
@@ -19,7 +19,7 @@ Default schema includes a **`User`** model (auth, roles, admin). Add your own mo
 ## First-time setup
 
 ```bash
-cd Taand
+cd TaandJs
 cp .env.example .env
 npm run docker:up      # optional — local Postgres + Redis (see docs/docker.md)
 npm install            # runs prisma generate via postinstall
@@ -190,7 +190,7 @@ For production at scale, use PostgreSQL and connection pooling (PgBouncer or Pri
 
 | Taand | Taand |
 |---------|-------|
-| `config/database.php` | `config/database.js` |
+| `config/database.php` | `settings/data.js` → `primary` |
 | Eloquent `User::all()` | `db().user.findMany()` |
 | `npm run db:migrate` | `npm run db:migrate` |
 | `DB::table()` | `db().$queryRaw` or models |

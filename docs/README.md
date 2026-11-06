@@ -5,7 +5,7 @@ TaandJs is a JavaScript framework built for modern Node.js apps — built for **
 ## Quick start
 
 ```bash
-cd Taand
+cd TaandJs
 cp .env.example .env
 npm install
 npm run db:migrate
@@ -30,7 +30,7 @@ Open `http://127.0.0.1:2977` (falls back to `1893` if busy).
 | **Feature modules** | [modules.md](./modules.md) |
 | Middleware (kernel, groups, CSRF) | [middleware.md](./middleware.md) |
 | Authentication & authorization | [auth.md](./auth.md) |
-| **Auth scaffolding (login/register)** | [auth-scaffolding.md](./auth-scaffolding.md) |
+| **Auth scaffolding (login/register)** — not available yet | [auth-scaffolding.md](./auth-scaffolding.md) |
 | **CORS** | [cors.md](./cors.md) |
 | **Production deployment** | [production.md](./production.md) |
 | **Docker (local Postgres/Redis)** | [docker.md](./docker.md) |
@@ -63,7 +63,7 @@ Open `http://127.0.0.1:2977` (falls back to `1893` if busy).
 TaandJs/
 ├── engine/              # Framework engine
 ├── start/               # Boot facades (app, route, db…)
-├── config/              # Configuration
+├── settings/            # Configuration
 ├── src/                 # Actions, features, jobs, mail, policies
 ├── ui/                  # .taand templates
 ├── flow/                # HTTP flow (http.js)

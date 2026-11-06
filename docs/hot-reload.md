@@ -4,8 +4,8 @@ TaandJs includes built-in live reload for local development — no extra tools r
 
 ## How it works
 
-1. File watcher monitors `ui`, `flow`, and `config`
-2. On save, caches are cleared and flow/config are hot-reloaded
+1. File watcher monitors `ui`, `flow`, `settings`, and `src/actions`
+2. On save, caches are cleared and routes/settings are hot-reloaded
 3. Browser receives an SSE event and refreshes automatically
 
 ## Security
@@ -32,7 +32,8 @@ Or set `TAAND_ENV=production`.
 |--------|--------|
 | `.taand` files | View cache flushed |
 | `flow/*.js` | Routes re-registered |
-| `config/*.js` | Config reloaded |
+| `settings/*.js` | Settings reloaded |
+| `src/actions/*.js` | Controller cache flushed |
 
 ## Console output
 

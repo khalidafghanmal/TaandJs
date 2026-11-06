@@ -12,7 +12,7 @@ Global middleware → Router → Route middleware → Handler → Terminable hoo
 
 ## Configuration
 
-Define your kernel in `config/middleware.js`:
+Define your kernel in `settings/http.js` (registry key `middleware`):
 
 ```js
 export default {
@@ -25,37 +25,42 @@ export default {
     'security',
   ],
 
-  groups: {
-    web: ['csrf'],
-    api: ['json', 'throttle:120,1'],
+  stacks: {
+    browser: ['startSession', 'csrf'],   // `web` group
+    json: ['json', 'throttle:120,1'],     // `api` group
   },
 
-  aliases: {
-    auth: 'authenticate',
-    guest: 'guestOnly',
+  filters: {
+    signedIn: 'authenticate',   // `auth` alias
+    signedOut: 'guestOnly',     // `guest` alias
   },
 
   priority: [
     'trustProxies',
+    'cors',
     'validateSize',
     'trim',
+    'startSession',
     'security',
     'throttle',
     'lockout',
     'authenticate',
     'role',
+    'can',
     'csrf',
     'json',
     'log',
   ],
+
+  crossOrigin: { /* see cors.md */ },
 };
 ```
 
 | Key | Purpose |
 |-----|---------|
 | `global` | Runs on **every** request |
-| `groups` | Named stacks — `middleware: 'web'` or `middleware: 'api'` |
-| `aliases` | Short names — `auth` → `authenticate` |
+| `stacks` | Named stacks — `browser` is the `web` group, `json` is the `api` group |
+| `filters` | Middleware behind the `auth` / `guest` aliases |
 | `priority` | Forces execution order when stacks merge |
 
 ---
@@ -175,7 +180,7 @@ curl -H "Authorization: Bearer your-secret-token" http://127.0.0.1:2977/api/me
 To combine API tokens with roles, set `role` on `_user` in custom middleware after `auth`:
 
 ```js
-// src/Middleware/AssignApiRole.js
+// src/middleware/AssignApiRole.js
 export class AssignApiRole extends Middleware {
   async handle(request, next) {
     const user = request.attribute('_user');
@@ -232,7 +237,7 @@ route.get('/health', () => ({ ok: true })).withoutMiddleware('throttle');
 ### Class-based (recommended)
 
 ```js
-// src/Middleware/MaintenanceMode.js
+// src/middleware/MaintenanceMode.js
 import { Middleware } from '../../engine/middleware/Middleware.js';
 import { Response } from '../../engine/http/Response.js';
 

@@ -142,14 +142,14 @@ POST /login
 `max` and decay are per call — not global config:
 
 ```js
-const max = Number(cfg('auth.loginMaxAttempts', 5));
-const decay = Number(cfg('auth.loginDecaySeconds', 900));
+const max = Number(cfg('app.loginMaxAttempts', 5));
+const decay = Number(cfg('app.loginDecaySeconds', 900));
 
 if (await attempt.tooMany(key, max)) { /* ... */ }
 await attempt.hit(key, decay);
 ```
 
-Example `.env` + `config/auth.js`:
+Example `.env` + `settings/runtime.js` (custom keys there are exposed as `app.*`):
 
 ```env
 TAAND_LOGIN_MAX_ATTEMPTS=3
@@ -157,7 +157,7 @@ TAAND_LOGIN_DECAY_SECONDS=300
 ```
 
 ```js
-// config/auth.js
+// settings/runtime.js
 loginMaxAttempts: Number(env('TAAND_LOGIN_MAX_ATTEMPTS', '5')),
 loginDecaySeconds: Number(env('TAAND_LOGIN_DECAY_SECONDS', '900')),
 ```
@@ -229,6 +229,6 @@ Set `REDIS_URL` and `TAAND_CACHE_STORE=redis` for production clusters. See [redi
 
 - [helpers.md](./helpers.md) — all helpers
 - [auth.md](./auth.md) — session authentication
-- [auth-scaffolding.md](./auth-scaffolding.md) — taandb login kit (built-in lockout)
+- [auth-scaffolding.md](./auth-scaffolding.md) — taandb login kit (not available yet)
 - [cache.md](./cache.md) — cache drivers
 - [middleware.md](./middleware.md) — `throttle` and `lockout` middleware

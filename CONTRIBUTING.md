@@ -5,7 +5,7 @@ Thank you for contributing!
 ## Getting started
 
 ```bash
-cd Taand
+cd TaandJs
 cp .env.example .env
 npm install
 npm run db:migrate
@@ -21,7 +21,7 @@ npm test
 
 ## Code style
 
-- Match existing patterns in `engine/` and `app/`.
+- Match existing patterns in `engine/` and `src/`.
 - Use ES modules (`import` / `export`).
 - Keep comments for non-obvious logic only.
 

@@ -21,7 +21,7 @@ TaandJs ships **production-grade session authentication** — Taand's security m
 ## Quick start
 
 ```bash
-cd Taand
+cd TaandJs
 cp .env.example .env
 npm install
 npm run db:migrate
@@ -51,21 +51,19 @@ Browser → startSession → csrf → auth → role/can → Controller
 
 ## Configuration
 
-`config/auth.js` — guards, session lifetime, role permissions:
+`settings/security.js` — session, tokens, role permissions (registry key `auth`; the `session` and `api` guards are fixed):
 
 ```js
 export default {
-  default: 'session',
-  guards: {
-    session: { driver: 'session', provider: 'users' },
-    api: { driver: 'token', provider: 'users' },
-  },
-  session: {
-    lifetime: 120,        // minutes
-    cookie: 'taand_session',
-    secure: false,        // set true behind HTTPS
-    sameSite: 'lax',
-    rememberDays: 14,
+  defaultMode: 'browser',   // session guard by default
+  browser: {
+    session: {
+      lifetime: 120,        // minutes
+      cookie: 'taand_session',
+      secure: false,        // TAAND_SESSION_SECURE=true behind HTTPS
+      sameSite: 'lax',
+      rememberDays: 14,
+    },
   },
   roles: {
     hierarchy: { admin: 100, editor: 50, user: 10 },
@@ -221,7 +219,7 @@ CSRF and auth are auto-injected via `viewFor()`:
 
 ## Authorization
 
-### Gates (`config/auth.js` + `src/policies.js`)
+### Gates (`settings/security.js` + `src/policies.js`)
 
 ```js
 // src/policies.js
@@ -234,7 +232,7 @@ export default function registerPolicies(gate) {
 }
 ```
 
-Permissions in `config/auth.js` under `roles.permissions` are checked automatically:
+Permissions in `settings/security.js` under `roles.permissions` are checked automatically:
 
 ```js
 // user with role "editor" automatically passes can:content.manage
@@ -333,14 +331,14 @@ TAAND_TOKEN_EXPIRATION_DAYS=0
 ## File reference
 
 ```
-config/auth.js                    # Guards, session, roles, permissions
-src/auth/
+settings/security.js              # Session, tokens, roles, permissions
+engine/auth/
   AuthManager.js                  # Login, logout, guards
   SessionStore.js                 # File session driver
   Hasher.js                       # scrypt passwords
   Gate.js                         # Authorization gates
   UserProvider.js                 # Prisma user repository
-src/middleware/
+engine/middleware/
   StartSession.js                 # Session lifecycle
   Authenticate.js                 # auth / auth:api
   auth/RoleMiddleware.js          # role:admin

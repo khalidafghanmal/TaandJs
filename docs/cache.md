@@ -81,17 +81,19 @@ await cache.driver('memory').get('key');
 
 ### Configuration
 
-`config/cache.js`:
+`settings/platform.js` → `memory` (registry key `cache`):
 
 ```js
-export default {
+memory: {
   default: 'memory',
   prefix: '',
   stores: {
     memory: { driver: 'memory', maxEntries: 1000, maxBytes: 52428800 },
     file: { driver: 'file', path: 'storage/cache/data' },
+    redis: { driver: 'redis', connection: 'cache' },
+    null: { driver: 'null' },
   },
-};
+},
 ```
 
 ### Environment variables

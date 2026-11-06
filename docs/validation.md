@@ -167,7 +167,7 @@ this.validate(req, rules, {
 });
 ```
 
-Or define defaults in `config/validation.js`:
+Or define defaults in `settings/validation.js`:
 
 ```js
 export default {
@@ -288,7 +288,7 @@ try {
 ## See also
 
 - [Controllers](./controllers.md) — `this.validate()` on the base controller
-- [Configuration](./config.md) — `config/validation.js`
+- [Configuration](./config.md) — `settings/validation.js`
 - [Database](./database.md) — Prisma models for `unique` / `exists`
 - [Seeders](./seeders.md) — sample data for testing validation
 - [Middleware](./middleware.md) — `web` group for session flash on redirect

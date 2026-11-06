@@ -540,7 +540,7 @@ MailMessage.make(app)
 
 ## Configuration
 
-`config/mail.js` + `.env`:
+`settings/platform.js` → `notify` (registry key `mail`) + `.env`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|

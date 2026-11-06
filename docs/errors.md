@@ -19,7 +19,7 @@ Taand renders styled HTML error pages for web requests. API routes (`/api/*`) an
 
 ## Customize messages
 
-Edit `config/errors.js`:
+Edit `settings/errors.js`:
 
 ```js
 export default {
@@ -43,7 +43,7 @@ Variables available:
 | `$code` | HTTP status (404) |
 | `$title` | Short title |
 | `$message` | User-facing explanation |
-| `$hint` | Optional extra tip (from `config/errors.js`) |
+| `$hint` | Optional extra tip (from `settings/errors.js`) |
 
 ## Throw errors in controllers
 

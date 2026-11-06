@@ -21,15 +21,15 @@ the scaffolder copies the Taand project (excluding `node_modules`, `dist`, runti
 ## Included
 
 - `engine/` — framework engine
-- `start/`, `config/`, `src/`, `flow/`, `ui/`, `web/`
-- `schema/`, `records/seeds/`, `bin/`, `specs/`
+- `start/`, `settings/`, `src/`, `flow/`, `ui/`, `web/`
+- `schema/`, `records/seeds/`, `bin/`, `specs/`, `docs/`
 - `package.json`, `.env.example`, `docker-compose.yml`
 
 ## Not copied
 
-- `node_modules/`, `dist/`, `stubs/`
+- `node_modules/`, `dist/`, `starter/`, `packages/`, `.git/`, `.github/`
 - `.env` (copied from `.env.example` instead)
-- `storage/logs`, `storage/database/*.db`, caches, uploads
+- Runtime data under `storage/` (logs, database, view/CLI/data caches, sessions, mail outbox)
 
 ## After create
 

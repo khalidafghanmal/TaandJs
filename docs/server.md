@@ -64,7 +64,7 @@ npm run dev            # Dev server with hot reload
 
 ## Configuration
 
-`config/server.js` + `.env`:
+`settings/server.js` + `.env`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|

@@ -8,7 +8,7 @@ Taand uses a simple, familiar layout. All paths are defined in `engine/core/Proj
 |--------|---------|
 | `engine/` | Framework engine (routing, HTTP, validation, CLI, …) |
 | `start/` | Bootstrap facades (`app.js`, `route.js`, `cache.js`, …) |
-| `config/` | Configuration (env-driven) |
+| `settings/` | Configuration modules (env-driven) — see [config.md](./config.md) |
 | `src/` | Your application code |
 | `ui/` | TaandView templates (`.taand`) |
 | `flow/` | Route definitions (`http.js`) |
@@ -34,7 +34,8 @@ src/
 ├── providers/      # Custom service providers
 ├── events.js       # Event → listener map
 ├── middleware.js   # Register custom middleware
-└── policies.js     # Authorization policies
+├── policies.js     # Authorization policies
+└── schedule.js     # Scheduled tasks (see docs/scheduler.md)
 ```
 
 ## Design rules
@@ -58,8 +59,8 @@ TaandJs uses short, product-owned names instead of mirroring another framework:
 |------|------|
 | `start/app.js` | Application bootstrap & service providers |
 | `flow/http.js` | Route table |
-| `config/app.js` | App name, env, debug |
-| `config/database.js` | `DATABASE_URL` (default: local PostgreSQL) |
+| `settings/runtime.js` | App name, env, debug, dev port |
+| `settings/data.js` | `DATABASE_URL` (default: local PostgreSQL), Redis |
 | `.env` | Environment overrides |
 
 ## CLI generators

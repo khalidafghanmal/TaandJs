@@ -63,7 +63,7 @@ Slug = lowercase first letter of module name (`Billing` → `billing`, `ShopApi`
 
 ## Configuration
 
-`config/app.js`:
+`settings/runtime.js`:
 
 ```js
 modules: {

@@ -267,7 +267,7 @@ export class MyJob extends Job {
 
 ## Configuration
 
-`config/queue.js` + `.env`:
+`settings/platform.js` → `jobs` (registry key `queue`) + `.env`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|

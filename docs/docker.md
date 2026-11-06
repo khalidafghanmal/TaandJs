@@ -7,7 +7,7 @@ Optional **Postgres + Redis** for local development — similar to [Taand Sail](
 ## Quick start
 
 ```bash
-cd Taand
+cd TaandJs
 npm run docker:up          # start Postgres + Redis in background
 cp .env.example .env       # DATABASE_URL already points at docker Postgres
 npm install
@@ -26,7 +26,7 @@ npm run docker:down
 ## How it is structured
 
 ```
-Taand/
+TaandJs/
 ├── docker-compose.yml     ← service definitions (Postgres, Redis)
 ├── .env                   ← app connects via DATABASE_URL / REDIS_URL
 ├── package.json           ← npm run docker:up / docker:down
@@ -53,7 +53,7 @@ Unlike a full app-in-Docker setup, **only infrastructure runs in containers**. Y
 | `postgres` | `postgres:16-alpine` | 5432 | Primary database (matches default `DATABASE_URL`) |
 | `redis` | `redis:7-alpine` | 6379 | Cache / sessions / queues (when Redis drivers are enabled) |
 
-Both services include **healthchecks** so `docker compose up` waits until they are ready.
+Both services include **healthchecks** — `docker compose ps` shows `healthy` once they accept connections. Ports are bound to `127.0.0.1` only.
 
 Data persists in a named volume `taand_pg_data` — stopping containers does not wipe your database.
 
@@ -66,14 +66,14 @@ Default `.env.example` values match Docker Compose:
 ```env
 DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
 DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
-# REDIS_URL=redis://127.0.0.1:6379
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
 | Variable | When to change |
 |----------|----------------|
 | `DATABASE_URL` | Neon/production host, credentials, pooler URL |
 | `DIRECT_URL` | Neon direct (non-pooler) host for migrations |
-| `REDIS_URL` | Uncomment when using Redis-backed cache/sessions |
+| `REDIS_URL` | Redis host. While set, sessions default to Redis (`SESSION_DRIVER`); cache and queue follow `TAAND_CACHE_STORE` / `QUEUE_CONNECTION` |
 
 ---
 
@@ -111,7 +111,7 @@ Another Postgres is running locally. Stop it or change the compose port mapping:
 
 ```yaml
 ports:
-  - '5433:5432'
+  - '127.0.0.1:5433:5432'
 ```
 
 Then update `DATABASE_URL` to use port `5433`.

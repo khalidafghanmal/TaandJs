@@ -78,16 +78,16 @@ log.channel('stderr').error('Critical alert');
 | `stderr` | stderr | Human-readable output to terminal |
 | `null` | null | Discard all output (testing) |
 
-Configure in `config/logging.js`.
+Configure in `settings/platform.js` → `observability`.
 
 ---
 
 ## Configuration
 
-`config/logging.js`:
+`settings/platform.js` → `observability` (registry key `logging`):
 
 ```js
-export default {
+observability: {
   default: 'stack',
   level: 'debug',
 
@@ -106,7 +106,7 @@ export default {
       days: 14,
     },
   },
-};
+},
 ```
 
 ### Environment variables
@@ -136,7 +136,7 @@ log.info('Login attempt', {
 });
 ```
 
-Add custom keys in `config/logging.js` → `sanitize`.
+Add custom keys in `settings/platform.js` → `observability.sanitize`.
 
 ### Safe file paths
 

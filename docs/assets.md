@@ -95,10 +95,10 @@ route.get('/api/config', () => ({
 
 ## Configuration
 
-`config/assets.js`:
+`settings/platform.js` → `static` (registry key `assets`):
 
 ```js
-export default {
+static: {
   url: '',                    // CDN origin — TAAND_ASSET_URL
   version: '',                // Manual cache bust — TAAND_ASSET_VERSION
   storagePrefix: '/storage',
@@ -108,11 +108,13 @@ export default {
     audio: 20 * 1024 * 1024,
     video: 100 * 1024 * 1024,
     document: 10 * 1024 * 1024,
+    default: 5 * 1024 * 1024,
   },
 
   allowed: {
-    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-    audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
+    // SVG omitted — it can carry script and enable stored XSS when served inline
+    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'],
     video: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
     document: ['application/pdf', 'text/plain'],
   },
@@ -121,7 +123,7 @@ export default {
     maxAge: 604800,
     immutable: true,
   },
-};
+},
 ```
 
 `.env`:
@@ -137,8 +139,8 @@ TAAND_ASSET_VERSION=1.0.0
 
 | `type` option | Allowed | Max size (default) |
 |---------------|---------|-------------------|
-| `image` | JPEG, PNG, GIF, WebP, SVG | 5 MB |
-| `audio` | MP3, WAV, OGG, WebM | 20 MB |
+| `image` | JPEG, PNG, GIF, WebP | 5 MB |
+| `audio` | MP3, WAV, OGG, WebM, MP4 | 20 MB |
 | `video` | MP4, WebM, OGG, MOV | 100 MB |
 | `document` | PDF, TXT | 10 MB |
 

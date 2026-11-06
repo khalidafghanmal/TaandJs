@@ -21,16 +21,16 @@ SESSION_DRIVER=redis
 
 | Feature | Config | Env |
 |---------|--------|-----|
-| Cache | `config/cache.js` → `stores.redis` | `TAAND_CACHE_STORE=redis` |
-| Queue | `config/queue.js` → `connections.redis` | `QUEUE_CONNECTION=redis` |
-| Sessions | `config/auth.js` → `session.driver` | `SESSION_DRIVER=redis` |
+| Cache | `settings/platform.js` → `memory.stores.redis` | `TAAND_CACHE_STORE=redis` |
+| Queue | `settings/platform.js` → `jobs.connections.redis` | `QUEUE_CONNECTION=redis` |
+| Sessions | `settings/security.js` → `browser.session.driver` | `SESSION_DRIVER=redis` |
 | Rate limits | Uses cache store | Automatic with redis cache |
 
 ---
 
 ## Configuration
 
-`config/redis.js`:
+`settings/data.js` → `redis`:
 
 ```js
 connections: {

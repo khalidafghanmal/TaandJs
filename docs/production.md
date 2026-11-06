@@ -147,7 +147,7 @@ Run migrations **before** accepting traffic (entrypoint or init container).
 - [ ] `TAAND_DEBUG=false`
 - [ ] Strong `TAAND_APP_KEY`
 - [ ] HTTPS via reverse proxy (nginx, Caddy, Cloudflare)
-- [ ] `session.secure: true` in `config/auth.js` behind HTTPS
+- [ ] `TAAND_SESSION_SECURE=true` (`browser.session.secure` in `settings/security.js`) behind HTTPS
 - [ ] Restrict `CORS_ALLOWED_ORIGINS` to your frontend domain
 - [ ] `npm audit` regularly
 

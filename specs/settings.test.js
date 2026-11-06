@@ -78,3 +78,13 @@ test('loadSettingsRegistry loads project settings', async () => {
   assert.deepEqual(registry.middleware.groups.web, ['startSession', 'csrf']);
   assert.equal(registry.cors.enabled, true);
 });
+
+test('cfg() reads engine registry keys, not settings file names', async () => {
+  const { app } = await import('../start/app.js');
+  const { default: cfg } = await import('../start/cfg.js');
+  app.make('config').merge(await loadSettingsRegistry(basePath));
+
+  assert.equal(cfg('app.name'), 'TaandJs');
+  assert.equal(cfg('auth.session.cookie'), 'taand_session');
+  assert.equal(cfg('runtime.name', 'fallback'), 'fallback');
+});

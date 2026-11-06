@@ -7,6 +7,15 @@ const LIVE_PATH = '/_Taand/live';
 const LIVE_SCRIPT_PATH = '/_Taand/live.js';
 const LIVE_CSS_PATH = '/_Taand/overlay.css';
 const HEARTBEAT_MS = 25_000;
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+function hostnameOf(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
 
 /** External script — inline scripts are blocked by the global CSP (default-src 'self'). */
 const CLIENT_SCRIPT_TAG = `<script id="taand-live" src="${LIVE_SCRIPT_PATH}" defer></script>`;
@@ -89,6 +98,12 @@ export class LiveReload {
     }
     if (!this.enabled) {
       res.writeHead(404);
+      res.end();
+      return;
+    }
+    // DNS rebinding: a remote page re-pointed at 127.0.0.1 could read the error stream.
+    if (!this.#isLocalHost(req.headers?.host)) {
+      res.writeHead(403);
       res.end();
       return;
     }
@@ -204,6 +219,12 @@ export class LiveReload {
     for (const client of this.#clients) {
       client.write(': ping\n\n');
     }
+  }
+
+  #isLocalHost(hostHeader) {
+    const host = hostnameOf(`http://${hostHeader ?? ''}`);
+    const appHost = hostnameOf(this.app.make('config').get('app.url', ''));
+    return Boolean(host) && (LOCAL_HOSTNAMES.has(host) || host === appHost);
   }
 
   #log(type, file) {

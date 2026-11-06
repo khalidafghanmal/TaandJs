@@ -115,3 +115,10 @@ test('request input priority form over query', async () => {
   const r = await reqBody('POST', '/?name=query', { name: 'form' }, 'application/x-www-form-urlencoded');
   assert.equal(r.input('name'), 'form');
 });
+
+test('request cookies keep the first of duplicate names', () => {
+  // Browsers send the more specific (host-only / longer-path) cookie first; a tossed
+  // cookie from a sibling subdomain comes later and must not win.
+  const r = req('/', { headers: { cookie: 'taand_session=real; theme=dark; taand_session=tossed' } });
+  assert.deepEqual(r.cookies(), { taand_session: 'real', theme: 'dark' });
+});

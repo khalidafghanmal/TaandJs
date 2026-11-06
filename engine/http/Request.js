@@ -141,7 +141,8 @@ export class Request {
     const jar = {};
     for (const part of header.split(';')) {
       const [key, ...rest] = part.trim().split('=');
-      if (key) jar[key] = rest.join('=');
+      // First wins: a later duplicate may be tossed in from a sibling subdomain.
+      if (key && !Object.hasOwn(jar, key)) jar[key] = rest.join('=');
     }
     return jar;
   }

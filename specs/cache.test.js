@@ -1,5 +1,8 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { CacheManager } from '../engine/cache/CacheManager.js';
 import { Container } from '../engine/core/Container.js';
 import { Config } from '../engine/core/Config.js';
@@ -99,3 +102,29 @@ test('cache null driver discards values', async () => {
   await cache.put('x', 'y');
   assert.equal(await cache.has('x'), false);
 });
+
+for (const driver of ['memory', 'file']) {
+  test(`${driver} cache increment keeps the original window expiry`, async (t) => {
+    const basePath = fs.mkdtempSync(path.join(os.tmpdir(), 'taand-cache-'));
+    t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
+    mock.timers.enable({ apis: ['Date'], now: 1_000_000 });
+    t.after(() => mock.timers.reset());
+
+    const { app, cache } = cacheApp({
+      config: {
+        cache: {
+          default: driver,
+          prefix: 'test_',
+          stores: { memory: { driver: 'memory' }, file: { driver: 'file', path: 'storage/cache/data' } },
+        },
+      },
+    });
+    app.basePath = basePath;
+
+    assert.equal(await cache.increment('rate', 1, 2), 1);
+    mock.timers.tick(1500);
+    assert.equal(await cache.increment('rate', 1, 2), 2);
+    mock.timers.tick(600);
+    assert.equal(await cache.get('rate'), undefined);
+  });
+}

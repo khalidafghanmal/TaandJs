@@ -68,7 +68,8 @@ export class MemoryDriver {
     if (entry && !isExpired(entry.expires)) {
       current = Number(entry.value) || 0;
       if (entry.expires != null) {
-        nextTtl = Math.max(1, Math.ceil((entry.expires - Date.now()) / 1000));
+        // Exact remaining time, so later hits never push the window's expiry forward.
+        nextTtl = (entry.expires - Date.now()) / 1000;
       } else {
         nextTtl = null;
       }

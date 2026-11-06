@@ -64,7 +64,9 @@ export class SmtpDriver {
 
     await this.#send(socket, 'DATA');
     await this.#expect(socket, 354);
-    await this.#send(socket, `${raw}\r\n.`);
+    // RFC 5321 4.5.2: CRLF-only line endings plus dot-stuffing, so body text can never end DATA early.
+    const body = raw.replace(/\r\n|\r|\n/g, '\r\n').replace(/^\./gm, '..');
+    await this.#send(socket, `${body}\r\n.`);
     await this.#expect(socket, 250);
     await this.#send(socket, 'QUIT');
 

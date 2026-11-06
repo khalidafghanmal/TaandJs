@@ -84,3 +84,31 @@ test('exists rule passes when row found', async () => {
   const data = await validator.make({ user_id: 1 }, { user_id: 'exists:user,id' });
   assert.equal(data.user_id, 1);
 });
+
+test('exists and unique reject Prisma operator objects from user input', async () => {
+  const queries = [];
+  const db = {
+    user: {
+      // Prisma treats { not: 0 } as a filter that matches any row, and { in: [] } as one matching none.
+      findFirst: async ({ where }) => { queries.push(where); return { id: 1 }; },
+      count: async ({ where }) => { queries.push(where); return 0; },
+    },
+  };
+
+  const app = mockApp(db);
+  const validator = new Validator(app, { ...rules, ...createDbRules(app) });
+
+  await assert.rejects(
+    () => validator.make({ user_id: { not: 0 } }, { user_id: 'required|exists:user,id' }),
+    ValidationError,
+  );
+  await assert.rejects(
+    () => validator.make({ user_id: [1] }, { user_id: 'required|exists:user,id' }),
+    ValidationError,
+  );
+  await assert.rejects(
+    () => validator.make({ email: { in: [] } }, { email: 'required|unique:user,email' }),
+    ValidationError,
+  );
+  assert.deepEqual(queries, []);
+});

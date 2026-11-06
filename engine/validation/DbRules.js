@@ -21,6 +21,8 @@ export function createDbRules(app) {
      */
     async unique(value, params) {
       if (isEmpty(value)) return true;
+      // Objects/arrays from JSON input would become Prisma filters ({ not: x }, { in: [...] }).
+      if (typeof value === 'object') return 'unique';
 
       const [table, column, except, idColumn = 'id'] = params;
       if (!table || !column) {
@@ -44,6 +46,7 @@ export function createDbRules(app) {
      */
     async exists(value, params) {
       if (isEmpty(value)) return true;
+      if (typeof value === 'object') return 'exists';
 
       const [table, column = 'id'] = params;
       if (!table) {

@@ -207,6 +207,34 @@ test('assertDevDashboard accepts localhost socket', () => {
   assert.doesNotThrow(() => assertDevDashboard(app, req('/__Taand/cache')));
 });
 
+test('assertDevDashboard rejects cross-site requests (CSRF on flush/retry links)', () => {
+  const app = Object.assign(new Container(), {
+    debug: true,
+    make(name) {
+      if (name === 'config') {
+        return {
+          get(key, fallback) {
+            if (key === 'app.env') return 'local';
+            if (key === 'app.devDashboardKey') return '';
+            return fallback;
+          },
+        };
+      }
+      throw new Error(name);
+    },
+  });
+
+  for (const site of ['cross-site', 'same-site']) {
+    const request = req('/__Taand/cache/flush', { headers: { 'sec-fetch-site': site } });
+    assert.throws(() => assertDevDashboard(app, request), (err) => err.status === 403);
+  }
+
+  for (const site of ['same-origin', 'none']) {
+    const request = req('/__Taand/cache/flush', { headers: { 'sec-fetch-site': site } });
+    assert.doesNotThrow(() => assertDevDashboard(app, request));
+  }
+});
+
 test('assertDevDashboard requires dashboard key when configured', () => {
   const app = Object.assign(new Container(), {
     debug: true,

@@ -19,6 +19,12 @@ export function assertDevDashboard(app, request) {
     throw HttpError.forbidden('Dev dashboards are only available from localhost');
   }
 
+  // Flush/retry are plain GET links, so refuse requests another site's page started.
+  const fetchSite = request.header('sec-fetch-site');
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    throw HttpError.forbidden('Cross-site requests to dev dashboards are not allowed');
+  }
+
   const key = config.get('app.devDashboardKey', '');
   if (key) {
     const provided =

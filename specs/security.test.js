@@ -23,6 +23,17 @@ test('Redirect blocks backslash', () => {
   assert.throws(() => Redirect.to('/path\\evil'), /Invalid redirect/);
 });
 
+test('Redirect blocks control characters browsers strip into //host', () => {
+  for (const url of ['/\t/evil.com', '/\n/evil.com', '/\r\n/evil.com', '/\x00/evil.com', '/\x7f/x']) {
+    assert.throws(() => Redirect.to(url), /Invalid redirect/, JSON.stringify(url));
+  }
+});
+
+test('Redirect keeps encoded and query-bearing paths', () => {
+  assert.equal(Redirect.to('/%09/evil.com').url, '/%09/evil.com');
+  assert.equal(Redirect.to('/search?q=a%20b').url, '/search?q=a%20b');
+});
+
 test('Redirect allows safe relative path', () => {
   const r = Redirect.to('/dashboard');
   assert.equal(r.url, '/dashboard');

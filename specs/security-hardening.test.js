@@ -207,6 +207,35 @@ test('assertDevDashboard accepts localhost socket', () => {
   assert.doesNotThrow(() => assertDevDashboard(app, req('/__Taand/cache')));
 });
 
+test('assertDevDashboard rejects proxied traffic from a loopback socket', () => {
+  const app = Object.assign(new Container(), {
+    debug: true,
+    make(name) {
+      if (name === 'config') {
+        return {
+          get(key, fallback) {
+            if (key === 'app.env') return 'local';
+            if (key === 'app.devDashboardKey') return '';
+            return fallback;
+          },
+        };
+      }
+      throw new Error(name);
+    },
+  });
+
+  for (const headers of [
+    { 'x-forwarded-for': '203.0.113.7' },
+    { forwarded: 'for=203.0.113.7' },
+    { 'x-real-ip': '203.0.113.7' },
+  ]) {
+    assert.throws(
+      () => assertDevDashboard(app, req('/__Taand/mail', { headers })),
+      (err) => err.status === 403,
+    );
+  }
+});
+
 test('assertDevDashboard requires dashboard key when configured', () => {
   const app = Object.assign(new Container(), {
     debug: true,

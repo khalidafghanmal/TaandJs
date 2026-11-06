@@ -138,7 +138,8 @@ export default {
         url: env('AWS_URL', ''),
         endpoint: env('AWS_ENDPOINT', ''),
         usePathStyleEndpoint: env('AWS_USE_PATH_STYLE_ENDPOINT', 'false') === 'true',
-        visibility: 'public',
+        // Objects are private unless a write opts in with { visibility: 'public' }.
+        visibility: 'private',
       },
     },
   },

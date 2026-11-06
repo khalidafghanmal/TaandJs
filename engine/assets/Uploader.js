@@ -74,8 +74,10 @@ export class Uploader {
 
     const resolvedDisk = disk ?? this.app.make('config').get('filesystems.default', 'local');
     if (this.app.has('storage') && resolvedDisk !== 'local') {
+      // Uploads are returned with a public URL, so they opt in to public visibility.
       const result = await this.app.make('storage').disk(resolvedDisk).put(relative, buffer, {
         contentType: mime,
+        visibility: 'public',
       });
       return {
         path: result.path,

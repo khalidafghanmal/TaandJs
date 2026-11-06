@@ -21,6 +21,7 @@ export default {
       bucket: env('AWS_BUCKET'),
       url: env('AWS_URL'),
       endpoint: env('AWS_ENDPOINT'),  // MinIO, R2, etc.
+      visibility: 'private',          // default — objects are not publicly readable
     },
   },
 };
@@ -45,10 +46,15 @@ AWS_URL=https://my-app-uploads.s3.amazonaws.com
 
 ```js
 const disk = this.app.make('storage').disk('s3');
-await disk.put('uploads/photo.jpg', buffer, { contentType: 'image/jpeg' });
-const url = disk.url('uploads/photo.jpg');
+await disk.put('private/doc.pdf', buffer, { contentType: 'application/pdf' });
 const signed = await disk.temporaryUrl('private/doc.pdf', 3600);
+
+// Opt in per write for files anyone may fetch by URL
+await disk.put('uploads/photo.jpg', buffer, { contentType: 'image/jpeg', visibility: 'public' });
+const url = disk.url('uploads/photo.jpg');
 ```
+
+S3 objects are **private by default**. Pass `{ visibility: 'public' }` to `put()` (or set `visibility: 'public'` on a disk dedicated to public files) only for content that should be world-readable; serve everything else with `temporaryUrl()`.
 
 ### Uploads (automatic disk)
 
@@ -56,7 +62,7 @@ const signed = await disk.temporaryUrl('private/doc.pdf', 3600);
 await this.upload(req, 'photo', { type: 'image', disk: 's3' });
 ```
 
-When `FILESYSTEM_DISK=s3`, uploads go to S3 automatically.
+When `FILESYSTEM_DISK=s3`, uploads go to S3 automatically. The uploader writes them with public visibility, because it returns a public URL for them.
 
 ---
 

@@ -16,8 +16,17 @@ export class QueueWorker {
   #running;
 
   async run(record) {
-    const payload = JobPayload.unpack(record.payload);
-    const job = await this.#resolver.resolve(payload);
+    let payload;
+    let job;
+
+    try {
+      payload = JobPayload.unpack(record.payload);
+      job = await this.#resolver.resolve(payload);
+    } catch (error) {
+      await this.#fail(record, payload, null, error);
+      throw error;
+    }
+
     const timeoutMs = (payload.meta?.timeout ?? 60) * 1000;
 
     await this.#fire('job.processing', { job: payload.job, queue: record.queue, attempt: record.attempts });
@@ -27,8 +36,6 @@ export class QueueWorker {
       await this.#fire('job.processed', { job: payload.job, queue: record.queue });
       return true;
     } catch (error) {
-      await job.failed?.(error);
-
       const maxAttempts = record.maxAttempts ?? payload.meta?.tries ?? 3;
       if (record.attempts < maxAttempts) {
         const backoff = payload.meta?.backoff ?? [10, 30, 60];
@@ -37,8 +44,7 @@ export class QueueWorker {
         throw new RetryError(delay, error);
       }
 
-      await this.#storeFailed(record, error);
-      await this.#fire('job.failed', { job: payload.job, queue: record.queue, error });
+      await this.#fail(record, payload, job, error);
       throw error;
     }
   }
@@ -77,6 +83,16 @@ export class QueueWorker {
 
   stop() {
     this.#running = false;
+  }
+
+  // Permanent failure: the failed_jobs record is written before the job's own failed() hook can throw.
+  async #fail(record, payload, job, error) {
+    await this.#storeFailed(record, error);
+    try {
+      await job?.failed?.(error);
+    } finally {
+      await this.#fire('job.failed', { job: payload?.job, queue: record.queue, error });
+    }
   }
 
   async #storeFailed(record, error) {

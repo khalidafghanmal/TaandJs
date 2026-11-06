@@ -110,7 +110,8 @@ export class QueueManager {
 
     if (driver === 'null') return new NullDriver();
     if (driver === 'sync') {
-      return new SyncDriver((record) => this.process({ ...record, attempts: 1 }));
+      // Sync jobs run once in-process, so the first failure is final.
+      return new SyncDriver((record) => this.process({ ...record, attempts: 1, maxAttempts: 1 }));
     }
     if (driver === 'array') return new ArrayDriver();
     if (driver === 'database') return new DatabaseDriver(this.app, config);

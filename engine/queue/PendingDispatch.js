@@ -45,4 +45,9 @@ export class PendingDispatch {
       availableAt: new Date(Date.now() + this.#delay * 1000).toISOString(),
     });
   }
+
+  // Thenable so `await queue.dispatch(job).onQueue('x')` pushes without an explicit push().
+  then(resolve, reject) {
+    return this.push().then(resolve, reject);
+  }
 }

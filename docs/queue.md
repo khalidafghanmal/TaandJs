@@ -18,7 +18,7 @@ Worker  → SendWelcomeEmail.handle()  → mail sent
 ## Quick start
 
 ```js
-import queue, { dispatch } from '../start/queue.js';
+import dispatch, { queue } from '../start/queue.js';
 import { SendWelcomeEmail } from '../src/jobs/SendWelcomeEmail.js';
 
 // Dispatch (runs immediately with sync driver)
@@ -333,14 +333,14 @@ events.listen('job.failed', ({ job, error }) => {
 
 | Method | Description |
 |--------|-------------|
-| `dispatch(job)` | Start fluent dispatch |
-| `queue.dispatch(job)` | Same with connection proxy |
+| `dispatch(job)` | Push a job (default export of `start/queue.js`) |
+| `queue.dispatch(job)` | Start fluent dispatch; pushed on `await` or `.push()` |
 | `queue.later(seconds, job)` | Delayed dispatch |
 | `queue.batch(jobs, opts)` | Dispatch many jobs |
 | `.onQueue(name)` | Set queue name |
 | `.delay(seconds)` | Delay before run |
 | `.connection(name)` | Set connection |
-| `.push()` | Push to queue |
+| `.push()` | Push to queue (same as awaiting the dispatch) |
 
 ---
 

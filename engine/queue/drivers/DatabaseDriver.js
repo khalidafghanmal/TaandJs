@@ -38,33 +38,39 @@ export class DatabaseDriver {
       data: { reservedAt: null },
     });
 
-    const row = await this.#db().job.findFirst({
-      where: {
-        queue,
-        reservedAt: null,
-        availableAt: { lte: new Date() },
-      },
-      orderBy: { id: 'asc' },
-    });
+    for (;;) {
+      const row = await this.#db().job.findFirst({
+        where: {
+          queue,
+          reservedAt: null,
+          availableAt: { lte: new Date() },
+        },
+        orderBy: { id: 'asc' },
+      });
 
-    if (!row) return null;
+      if (!row) return null;
 
-    await this.#db().job.update({
-      where: { id: row.id },
-      data: {
-        reservedAt: new Date(),
-        attempts: { increment: 1 },
-      },
-    });
+      const reservedAt = new Date();
+      // Conditional claim: if another worker reserved this row first, count is 0 and we try the next one.
+      const { count } = await this.#db().job.updateMany({
+        where: { id: row.id, reservedAt: null },
+        data: {
+          reservedAt,
+          attempts: { increment: 1 },
+        },
+      });
 
-    return {
-      id: String(row.id),
-      queue: row.queue,
-      payload: row.payload,
-      attempts: row.attempts + 1,
-      maxAttempts: row.maxAttempts,
-      reservedAt: new Date().toISOString(),
-    };
+      if (count !== 1) continue;
+
+      return {
+        id: String(row.id),
+        queue: row.queue,
+        payload: row.payload,
+        attempts: row.attempts + 1,
+        maxAttempts: row.maxAttempts,
+        reservedAt: reservedAt.toISOString(),
+      };
+    }
   }
 
   async delete(id) {

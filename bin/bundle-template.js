@@ -6,29 +6,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { shouldSkip } from '../packages/create-taand/lib/create-project.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const target = path.join(root, 'packages', 'create-taand', 'template');
 
-const EXCLUDE = new Set([
-  'node_modules',
-  'dist',
-  'packages',
-  'starter',
-  'stubs',
-  '.git',
-  '.env',
-  'storage',
-]);
-
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
 
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (EXCLUDE.has(entry.name)) continue;
-
     const from = path.join(src, entry.name);
+    if (shouldSkip(path.relative(root, from), entry.isDirectory())) continue;
+
     const to = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {

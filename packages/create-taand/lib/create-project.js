@@ -5,14 +5,15 @@ import { spawn } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const EXCLUDE_DIRS = new Set([
+/** Top-level template entries that never belong in a new app. */
+const EXCLUDE_ROOT = new Set([
   'node_modules',
   'dist',
   'starter',
   'packages',
-  'stubs',
   '.git',
   '.github',
+  '.worktrees',
 ]);
 
 const EXCLUDE_FILES = new Set(['.env']);
@@ -27,27 +28,28 @@ const EXCLUDE_PREFIXES = [
   'storage/mail/outbox/',
 ];
 
-function shouldSkip(relPath, isDir) {
-  const parts = relPath.split(path.sep).filter(Boolean);
-  if (parts.some((p) => EXCLUDE_DIRS.has(p))) return true;
-  if (!isDir && EXCLUDE_FILES.has(path.basename(relPath))) return true;
+/**
+ * @param {string} relPath path relative to the template root
+ * @param {boolean} isDir
+ */
+export function shouldSkip(relPath, isDir) {
   const normalized = relPath.replace(/\\/g, '/');
-  if (EXCLUDE_PREFIXES.some((p) => normalized.startsWith(p))) return true;
-  return false;
+  if (EXCLUDE_ROOT.has(normalized.split('/')[0])) return true;
+  if (!isDir && EXCLUDE_FILES.has(path.posix.basename(normalized))) return true;
+  return EXCLUDE_PREFIXES.some((p) => normalized.startsWith(p));
 }
 
-async function copyTemplate(src, dest) {
+async function copyTemplate(src, dest, root = src) {
   await fs.mkdir(dest, { recursive: true });
   const entries = await fs.readdir(src, { withFileTypes: true });
 
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);
-    const rel = path.relative(src, srcPath);
-    if (shouldSkip(rel, entry.isDirectory())) continue;
+    if (shouldSkip(path.relative(root, srcPath), entry.isDirectory())) continue;
 
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      await copyTemplate(srcPath, destPath);
+      await copyTemplate(srcPath, destPath, root);
     } else {
       await fs.copyFile(srcPath, destPath);
     }

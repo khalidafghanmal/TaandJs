@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createProject } from '../packages/create-taand/lib/create-project.js';
@@ -17,7 +18,7 @@ async function main() {
   });
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
 if (isMain) {
   main().catch((err) => {
     console.error('[create-taand]', err.message);

@@ -132,6 +132,13 @@ export class CacheRepository {
           try {
             const value = await callback();
             await this.#writeFlexible(metaKey, key, value, fresh, maxStale);
+          } catch (error) {
+            // Nothing awaits this refresh, so a rejection here would crash the process.
+            if (this.app.has('exceptions')) {
+              this.app.make('exceptions').report(error);
+            } else if (this.app.debug) {
+              console.error('[Taand] Cache flexible refresh failed', error);
+            }
           } finally {
             this.#flexiblePending.delete(metaKey);
           }

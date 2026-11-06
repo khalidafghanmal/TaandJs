@@ -99,3 +99,30 @@ test('cache null driver discards values', async () => {
   await cache.put('x', 'y');
   assert.equal(await cache.has('x'), false);
 });
+
+test('cache flexible reports a failing background refresh instead of rejecting', async (t) => {
+  const { app, cache } = cacheApp();
+  const reported = [];
+  const config = app.make('config');
+  app.has = (name) => name === 'exceptions';
+  app.make = (name) => {
+    if (name === 'config') return config;
+    if (name === 'exceptions') return { report: (error) => reported.push(error) };
+    return null;
+  };
+
+  const unhandled = [];
+  const onUnhandled = (reason) => unhandled.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+  t.after(() => process.off('unhandledRejection', onUnhandled));
+
+  assert.equal(await cache.flexible('report', [0, 60], () => 'v1'), 'v1');
+  const stale = await cache.flexible('report', [0, 60], () => {
+    throw new Error('refresh failed');
+  });
+  assert.equal(stale, 'v1');
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(unhandled, []);
+  assert.equal(reported[0]?.message, 'refresh failed');
+});

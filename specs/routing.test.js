@@ -4,6 +4,7 @@ import { Router } from '../engine/routing/Router.js';
 import { Redirect } from '../engine/http/Redirect.js';
 import { Route } from '../engine/routing/Route.js';
 import { Middleware } from '../engine/middleware/Middleware.js';
+import { ExceptionHandler } from '../engine/core/ExceptionHandler.js';
 import { miniApp, req, dispatch, body } from './helpers/setup.js';
 
 function boot() {
@@ -237,4 +238,22 @@ test('async handler is awaited', async () => {
   r.get('/async', async () => ({ async: true }));
   const res = await dispatch(r, req('/async'));
   assert.deepEqual(body(res), { async: true });
+});
+
+test('malformed percent-encoding in a route param is a 400, not a 500', async () => {
+  const { router, pipeline, app } = miniApp();
+  router.get('/users/{id}', (q) => q.params.id);
+
+  await assert.rejects(() => dispatch(router, req('/users/%E0%A4%A')), { status: 400 });
+
+  const { ExceptionHandler } = await import('../engine/core/ExceptionHandler.js');
+  const exceptions = new ExceptionHandler(app);
+  const baseMake = app.make.bind(app);
+  const baseHas = app.has.bind(app);
+  app.make = (name) => (name === 'exceptions' ? exceptions : baseMake(name));
+  app.has = (name) => name === 'exceptions' || baseHas(name);
+
+  const { response } = await pipeline.send(req('/users/%ZZ'), [], (q) => router.dispatch(q));
+  assert.equal(response.status, 400);
+  assert.equal(body(await dispatch(router, req('/users/caf%C3%A9'))), 'café');
 });

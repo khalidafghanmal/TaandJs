@@ -1,3 +1,5 @@
+import { HttpError } from '../http/HttpError.js';
+
 /**
  * Single route definition — Taand Route equivalent.
  */
@@ -91,7 +93,11 @@ export class Route {
     const params = {};
     for (const name of this.paramNames) {
       if (match.groups?.[name] !== undefined) {
-        params[name] = decodeURIComponent(match.groups[name]);
+        try {
+          params[name] = decodeURIComponent(match.groups[name]);
+        } catch {
+          throw HttpError.badRequest('Malformed URL encoding');
+        }
       }
     }
     return params;

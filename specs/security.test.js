@@ -5,7 +5,7 @@ import { Response } from '../engine/http/Response.js';
 import { SecurityHeaders } from '../engine/middleware/global/SecurityHeaders.js';
 import { ThrottleRequests } from '../engine/middleware/ThrottleRequests.js';
 import { CsrfProtection } from '../engine/middleware/web/CsrfProtection.js';
-import { miniApp, req, reqBody } from './helpers/setup.js';
+import { miniApp, req, reqBody, dispatch } from './helpers/setup.js';
 
 test('Redirect blocks open redirect http', () => {
   assert.throws(() => Redirect.to('http://evil.com'), /relative path/);
@@ -60,6 +60,24 @@ test('ThrottleRequests blocks after max attempts', async () => {
   await mw.handle(request, next);
   const blocked = await mw.handle(request, next);
   assert.equal(blocked.status, 429);
+});
+
+test('ThrottleRequests shares one bucket across URL variants of the same route', async () => {
+  const { router, middleware } = miniApp();
+  middleware.register('throttle', ThrottleRequests);
+  router.post('/login', () => 'ok').middleware('throttle:2,1');
+  router.get('/users/{id}', () => 'ok').middleware('throttle:2,1');
+
+  const statuses = async (method, paths, ip) => {
+    const out = [];
+    for (const path of paths) {
+      out.push((await dispatch(router, req(path, { method, ip }))).status);
+    }
+    return out;
+  };
+
+  assert.deepEqual(await statuses('POST', ['/login', '/login/', '/login//'], '10.9.0.1'), [200, 200, 429]);
+  assert.deepEqual(await statuses('GET', ['/users/1', '/users//1/', '/users/%31'], '10.9.0.2'), [200, 200, 429]);
 });
 
 test('ThrottleRequests sets rate limit headers', async () => {

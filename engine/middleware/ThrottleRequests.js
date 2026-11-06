@@ -1,5 +1,6 @@
 import { Middleware } from './Middleware.js';
 import { Response } from '../http/Response.js';
+import { Route } from '../routing/Route.js';
 
 /**
  * Rate limiter — uses cache/redis when configured (multi-server safe).
@@ -19,7 +20,10 @@ export class ThrottleRequests extends Middleware {
   }
 
   async handle(request, next) {
-    const key = `${request.ip()}:${request.method}:${request.path}`;
+    // Key on what the router matched, not the raw path: "/login/", "/login//" and "/users/%31"
+    // all hit the same route and must share a bucket.
+    const target = request.attribute('_route')?.uri ?? Route.normalizeUri(request.path);
+    const key = `${request.ip()}:${request.method}:${target}`;
 
     if (this.app.has('rateLimiter')) {
       const limiter = this.app.make('rateLimiter');

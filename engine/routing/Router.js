@@ -176,7 +176,7 @@ export class Router {
     const { route, params } = matched;
     this.#currentRoute = route;
 
-    const req = request.withParams(params);
+    const req = request.withParams(params).setAttribute('_route', route);
     const pipeline = this.#pipeline;
     const run = async (r) => resolveResponse(await this.#runAction(route, r), this.#app);
 

@@ -4,7 +4,8 @@ import crypto from 'node:crypto';
 import {
   categoryForMime,
   dispositionForMime,
-  extname,
+  extForMime,
+  hasSignature,
   isBlockedExtension,
   mimeFromExt,
   sniffMime,
@@ -49,19 +50,21 @@ export class Uploader {
       throw new Error('[Taand] File type not allowed');
     }
 
-    const ext = extname(originalName) || this.#extFromBuffer(buffer);
     const declaredMime = mimeFromExt(originalName);
     const sniffed = sniffMime(buffer);
+    // Types with a magic-byte signature must actually match it; the client name is only a hint.
+    if (!sniffed && hasSignature(declaredMime)) {
+      throw new Error(`[Taand] Invalid file type: expected ${type}`);
+    }
     const mime = sniffed ?? declaredMime;
 
-    const category = categoryForMime(mime, allowed) ?? categoryForMime(declaredMime, allowed);
+    const category = categoryForMime(mime, allowed);
     if (!category || (type && category !== type)) {
       throw new Error(`[Taand] Invalid file type: expected ${type}`);
     }
 
-    if (!allowed[category]?.includes(mime) && !allowed[category]?.includes(declaredMime)) {
-      throw new Error('[Taand] MIME type not permitted');
-    }
+    // Stored extension follows the validated type, so it is served with the same Content-Type.
+    const ext = extForMime(mime);
 
     const maxSize = limits[category] ?? limits.default ?? 5_242_880;
     if (buffer.length > maxSize) {
@@ -154,17 +157,5 @@ export class Uploader {
     }
 
     return null;
-  }
-
-  #extFromBuffer(buffer) {
-    const mime = sniffMime(buffer);
-    const map = {
-      'image/jpeg': '.jpg',
-      'image/png': '.png',
-      'image/gif': '.gif',
-      'image/webp': '.webp',
-      'application/pdf': '.pdf',
-    };
-    return map[mime] ?? '.bin';
   }
 }

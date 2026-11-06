@@ -27,11 +27,13 @@ const SIGNATURES = [
   { mime: 'image/jpeg', bytes: [0xff, 0xd8, 0xff] },
   { mime: 'image/png', bytes: [0x89, 0x50, 0x4e, 0x47] },
   { mime: 'image/gif', bytes: [0x47, 0x49, 0x46] },
-  { mime: 'image/webp', bytes: [0x52, 0x49, 0x46, 0x46] },
+  // null = any byte. RIFF....WEBP — bare RIFF also matches WAV/AVI
+  { mime: 'image/webp', bytes: [0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x57, 0x45, 0x42, 0x50] },
   { mime: 'application/pdf', bytes: [0x25, 0x50, 0x44, 0x46] },
   { mime: 'audio/mpeg', bytes: [0xff, 0xfb] },
   { mime: 'audio/mpeg', bytes: [0x49, 0x44, 0x33] },
-  { mime: 'video/mp4', bytes: [0x00, 0x00, 0x00] },
+  // ISO BMFF: 'ftyp' box type at offset 4
+  { mime: 'video/mp4', bytes: [null, null, null, null, 0x66, 0x74, 0x79, 0x70] },
 ];
 
 const BLOCKED_EXT = new Set([
@@ -57,7 +59,7 @@ export function sniffMime(buffer) {
   if (!buffer || buffer.length < 4) return null;
 
   for (const sig of SIGNATURES) {
-    if (sig.bytes.every((b, i) => buffer[i] === b)) {
+    if (sig.bytes.every((b, i) => i < buffer.length && (b === null || buffer[i] === b))) {
       return sig.mime;
     }
   }
@@ -66,6 +68,16 @@ export function sniffMime(buffer) {
   if (buffer[0] === 0x3c && buffer[1] === 0x68) return null;
 
   return null;
+}
+
+/** True when the MIME type has a magic-byte signature, so content must match it. */
+export function hasSignature(mime) {
+  return SIGNATURES.some((sig) => sig.mime === mime);
+}
+
+/** Canonical stored extension for a MIME type. */
+export function extForMime(mime) {
+  return Object.entries(MIME_BY_EXT).find(([, m]) => m === mime)?.[0] ?? '.bin';
 }
 
 export function categoryForMime(mime, allowed) {

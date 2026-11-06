@@ -13,12 +13,15 @@ import {
 } from '../../core/ProjectPaths.js';
 import { toPascalCase } from '../utils/strings.js';
 
-function parseSubdir(raw) {
-  return path
-    .dirname(String(raw).replace(/\\/g, '/'))
-    .split('/')
-    .filter((p) => p && p !== '.')
-    .join(path.sep);
+/** Resolve the optional subdirectory in `raw` (e.g. `Admin/UserController`) under `baseDir`. */
+function subdirOf(baseDir, raw) {
+  const str = String(raw);
+  const parts = path.dirname(str.replace(/\\/g, '/')).split('/');
+  // Reject `..`, absolute paths and drive letters (`C:`) so output stays under baseDir.
+  if (path.posix.isAbsolute(str) || path.win32.isAbsolute(str) || parts.some((p) => p === '..' || p.includes(':'))) {
+    throw new Error(`[Taand] Invalid path [${str}]: use a relative name without ".."`);
+  }
+  return path.join(baseDir, ...parts.filter((p) => p && p !== '.'));
 }
 
 function baseClassName(raw) {
@@ -32,8 +35,7 @@ export const GENERATOR_DEFINITIONS = {
     missing: 'Missing controller name',
     resolve(ctx, raw) {
       const className = baseClassName(raw);
-      const relDir = parseSubdir(raw);
-      const outDir = relDir ? path.join(controllersDir(ctx.root), relDir) : controllersDir(ctx.root);
+      const outDir = subdirOf(controllersDir(ctx.root), raw);
       return {
         outFile: path.join(outDir, `${className}.js`),
         vars: { class: className },
@@ -47,10 +49,7 @@ export const GENERATOR_DEFINITIONS = {
     missing: 'Missing middleware name',
     resolve(ctx, raw) {
       const className = baseClassName(raw);
-      const relDir = parseSubdir(raw);
-      const outDir = relDir
-        ? path.join(middlewareDir(ctx.root), relDir)
-        : middlewareDir(ctx.root);
+      const outDir = subdirOf(middlewareDir(ctx.root), raw);
       return {
         outFile: path.join(outDir, `${className}.js`),
         vars: { class: className },

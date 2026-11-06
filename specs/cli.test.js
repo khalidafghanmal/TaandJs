@@ -115,3 +115,32 @@ test('make:controller cold start completes under 1 second', async () => {
   const elapsed = Date.now() - start;
   assert.ok(elapsed < 2500, `expected <2500ms, got ${elapsed}ms`);
 });
+
+test('GeneratorEngine rejects path traversal and absolute paths', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'taand-cli-trav-'));
+  const root = path.join(tmp, 'app');
+  await fs.mkdir(path.join(root, 'src', 'actions'), { recursive: true });
+
+  try {
+    for (const [id, raw] of [
+      ['controller', '../../x/Foo'],
+      ['controller', 'Admin/../../../Foo'],
+      ['middleware', '..\\..\\x\\Foo'],
+      ['controller', '/abs/Foo'],
+      ['controller', 'C:/abs/Foo'],
+    ]) {
+      assert.throws(
+        () => GeneratorEngine.run(id, { positionals: [raw], flags: new Set(['force']), root }),
+        /Invalid path/,
+        `${id} ${raw}`,
+      );
+    }
+    await assert.rejects(fs.access(path.join(root, 'x')));
+    await assert.rejects(fs.access(path.join(tmp, 'x')));
+
+    GeneratorEngine.run('controller', { positionals: ['Admin/UserController'], flags: new Set(['force']), root });
+    await fs.access(path.join(root, 'src', 'actions', 'Admin', 'UserController.js'));
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});

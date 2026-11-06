@@ -24,6 +24,12 @@ export class GeneratorEngine {
     const ctx = root ? new GeneratorContext(root) : GeneratorContext.resolve(fromUrl);
     const force = flags?.has?.('force') || flags?.has?.('f');
     const spec = def.resolve(ctx, raw);
+    for (const file of [spec.outFile, ...(spec.extraFiles ?? []).map((e) => e.path)]) {
+      const rel = path.relative(ctx.root, file);
+      if (!rel || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+        throw new Error(`[Taand] Refusing to write outside the project: ${file}`);
+      }
+    }
 
     const contents = TemplateEngine.render(def.stub, spec.vars);
     writeGeneratedFile(spec.outFile, contents, { force });

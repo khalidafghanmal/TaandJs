@@ -47,6 +47,15 @@ export class MailManager {
     await this.#checkRateLimit();
     await this.#fire('mail.sending', { message, mailer: mailer ?? this.#default });
 
+    // Plain-object messages never went through MailMessage.attach(); check every path before MimeBuilder reads it.
+    message = {
+      ...message,
+      attachments: (message.attachments ?? []).map((file) => ({
+        ...file,
+        path: MailValidator.attachmentPath(file.path, this.app.basePath),
+      })),
+    };
+
     const raw = new MimeBuilder().build(message);
     const driver = this.mailer(mailer);
 

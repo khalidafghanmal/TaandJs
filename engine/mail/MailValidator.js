@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CRLF_RE = /[\r\n]/;
 
@@ -24,6 +27,25 @@ export class MailValidator {
       throw new Error(`[Taand] Header injection blocked in ${field}`);
     }
     return text;
+  }
+
+  // Real paths on both sides, so `..` segments and symlinks inside root can't reach files outside it.
+  static attachmentPath(filePath, root) {
+    let real;
+    let base;
+    try {
+      real = fs.realpathSync(path.resolve(String(filePath ?? '')));
+      base = fs.realpathSync(root);
+    } catch {
+      throw new Error(`[Taand] Attachment not found: ${filePath}`);
+    }
+    if (!real.startsWith(base + path.sep)) {
+      throw new Error('[Taand] Attachment path is outside the allowed directory');
+    }
+    if (!fs.statSync(real).isFile()) {
+      throw new Error(`[Taand] Attachment not found: ${filePath}`);
+    }
+    return real;
   }
 
   static parseAddress(input) {

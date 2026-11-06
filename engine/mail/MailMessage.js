@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { MailValidator } from './MailValidator.js';
 
@@ -68,20 +67,22 @@ export class MailMessage {
     return this;
   }
 
-  attach(filePath, { name = null, mime = null } = {}) {
-    const resolved = path.resolve(filePath);
-    this.#assertAttachmentPath(resolved);
-    this.#data.attachments.push({
-      path: resolved,
-      name: name ?? path.basename(resolved),
-      mime,
-    });
-    return this;
+  attach(filePath, options = {}) {
+    return this.#attachWithin(filePath, this.app.basePath, options);
   }
 
   attachFromStorage(relativePath, options = {}) {
-    const full = path.join(this.app.basePath, 'storage', 'app', 'public', relativePath);
-    return this.attach(full, options);
+    const root = path.join(this.app.basePath, 'storage', 'app', 'public');
+    return this.#attachWithin(path.join(root, relativePath), root, options);
+  }
+
+  #attachWithin(filePath, root, { name = null, mime = null } = {}) {
+    this.#data.attachments.push({
+      path: MailValidator.attachmentPath(filePath, root),
+      name: name ?? path.basename(filePath),
+      mime,
+    });
+    return this;
   }
 
   async view(name, data = {}) {
@@ -119,16 +120,6 @@ export class MailMessage {
     }
 
     return { ...this.#data };
-  }
-
-  #assertAttachmentPath(resolved) {
-    const base = path.resolve(this.app.basePath);
-    if (!resolved.startsWith(base + path.sep)) {
-      throw new Error('[Taand] Attachment path must be inside the application directory');
-    }
-    if (!fs.existsSync(resolved)) {
-      throw new Error(`[Taand] Attachment not found: ${resolved}`);
-    }
   }
 
   static #flatten(addresses) {

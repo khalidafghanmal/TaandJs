@@ -573,7 +573,7 @@ MAIL_PASSWORD=your-pass
 |------------|-------------|
 | **Header injection block** | CRLF in subject/headers rejected |
 | **Email validation** | RFC-style address checks |
-| **Safe attachments** | Paths must be inside app directory |
+| **Safe attachments** | Real paths (symlinks resolved) must be inside the app directory, `attachFromStorage` inside `storage/app/public`; checked on every send |
 | **JSON-only** | No unsafe deserialization |
 | **Rate limiting** | Configurable emails/minute |
 | **Dashboard gated** | Local + debug only |

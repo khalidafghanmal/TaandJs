@@ -66,3 +66,58 @@ test('mail rejects invalid input', async () => {
   const { mail } = mailApp();
   await assert.rejects(() => mail.resolve({}), /Invalid mailable/);
 });
+
+async function outsideFile() {
+  const fsp = await import('node:fs/promises');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'taand-mail-outside-'));
+  const file = path.join(dir, 'secret.txt');
+  await fsp.writeFile(file, 'top secret');
+  return { dir, file, cleanup: () => fsp.rm(dir, { recursive: true, force: true }) };
+}
+
+test('mail rejects plain-object attachments outside the app directory', async () => {
+  const { mail } = mailApp();
+  const outside = await outsideFile();
+  try {
+    await assert.rejects(() => mail.send({
+      from: { email: 'app@example.com' },
+      to: [{ email: 'user@example.com' }],
+      subject: 'Hi',
+      text: 'body',
+      attachments: [{ path: outside.file, name: 'secret.txt' }],
+    }, 'array'), /Attachment/);
+    assert.equal(mail.sent('array').length, 0);
+  } finally {
+    await outside.cleanup();
+  }
+});
+
+test('mail attachFromStorage cannot traverse out of public storage', () => {
+  const { app } = mailApp();
+  assert.throws(() => MailMessage.make(app).attachFromStorage('../../../package.json'), /Attachment/);
+});
+
+test('mail attach rejects a symlink inside the app that points outside it', async (t) => {
+  const fsp = await import('node:fs/promises');
+  const path = await import('node:path');
+  const { app } = mailApp();
+  const outside = await outsideFile();
+  const root = await outsideFile();
+  app.basePath = root.dir;
+  const link = path.join(root.dir, 'linked');
+  try {
+    try {
+      // A directory junction needs no extra privileges on Windows; elsewhere it is a plain symlink.
+      await fsp.symlink(outside.dir, link, 'junction');
+    } catch {
+      t.skip('symlinks not permitted on this system');
+      return;
+    }
+    assert.throws(() => MailMessage.make(app).attach(path.join(link, 'secret.txt')), /Attachment/);
+  } finally {
+    await outside.cleanup();
+    await root.cleanup();
+  }
+});

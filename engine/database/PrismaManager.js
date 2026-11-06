@@ -27,10 +27,7 @@ export class PrismaManager {
   }
 
   static #resolveDatabaseUrl(app) {
-    const url = app.make('config').get(
-      'database.url',
-      'postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public',
-    );
+    const url = app.make('config').get('database.url', 'file:../storage/database/taand.db');
     if (!url.startsWith('file:')) return url;
 
     const filePath = url.slice(5);

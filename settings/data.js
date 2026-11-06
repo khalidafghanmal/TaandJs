@@ -3,8 +3,8 @@ import { env } from '../engine/core/Env.js';
 /** Data stores — primary database and Redis connections. */
 export default {
   primary: {
-    connection: env('DB_CONNECTION', 'postgresql'),
-    url: env('DATABASE_URL', 'postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public'),
+    connection: env('DB_CONNECTION', 'sqlite'),
+    url: env('DATABASE_URL', 'file:../storage/database/taand.db'),
   },
 
   redis: {

@@ -1,6 +1,7 @@
 const PLACEHOLDER_APP_KEY = 'change-this-to-a-random-32-char-string';
 const PLACEHOLDER_DB =
   'postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public';
+const PLACEHOLDER_SQLITE_DB = 'file:../storage/database/taand.db';
 
 /**
  * Fail fast when production env is unsafe or incomplete.
@@ -35,7 +36,7 @@ export function assertProductionEnv(config) {
     throw new Error('[Taand] Set DATABASE_URL before running the production server');
   }
 
-  if (url === PLACEHOLDER_DB && app.env === 'production') {
+  if ((url === PLACEHOLDER_DB || url === PLACEHOLDER_SQLITE_DB) && app.env === 'production') {
     throw new Error('[Taand] DATABASE_URL still uses the example value — set a real database URL');
   }
 

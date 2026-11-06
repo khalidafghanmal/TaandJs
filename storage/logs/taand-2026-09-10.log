@@ -1,2 +1,0 @@
-{"datetime":"2026-09-10T15:20:13.530Z","channel":"stack","level":"info","message":"Request completed","context":{"ip":"127.0.0.1","method":"GET","path":"/","status":200,"ms":117}}
-{"datetime":"2026-09-10T15:20:15.282Z","channel":"stack","level":"info","message":"Request completed","context":{"ip":"127.0.0.1","method":"GET","path":"/favicon.ico","status":404,"ms":26}}

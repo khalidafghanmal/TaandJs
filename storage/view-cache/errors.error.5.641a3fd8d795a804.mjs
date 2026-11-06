@@ -1,8 +1,0 @@
-export default async function render(__data, __helpers) {
-  const __e = __helpers.escape;
-  let __out = '';
-  const __slots = {};
-  
-__out += "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"robots\" content=\"noindex\">\n  <title>";__out += __e(__data.code);__out += " — ";__out += __e(__data.title);__out += "</title>\n  <link rel=\"stylesheet\" href=\"";__out += __e(__helpers.asset('css/taand.css'));__out += "\">\n</head>\n<body class=\"taand-page taand-error\">\n  <a href=\"/\" class=\"taand-brand\"><span>Taand</span>Js</a>\n\n  <div class=\"taand-error-card\">\n    <div class=\"taand-error-code\">";__out += __e(__data.code);__out += "</div>\n    <h1>";__out += __e(__data.title);__out += "</h1>\n    <p class=\"taand-error-message\">";__out += __e(__data.message);__out += "</p>\n\n    ";if (__data.hint) { __out += "<p class=\"taand-error-hint\">";__out += __e(__data.hint);__out += "</p>"; }__out += "\n\n    <div class=\"taand-error-actions\">\n      <a href=\"/\" class=\"taand-btn\">Go home</a>\n      ";if (__data.code === 401 || __data.code === 419) { __out += "<a href=\"/login\" class=\"taand-btn taand-btn--secondary\">Sign in</a>"; }__out += "\n      ";if (__data.code === 404) { __out += "<a href=\"javascript:history.back()\" class=\"taand-btn taand-btn--secondary\">Go back</a>"; }__out += "\n      ";if (__data.code === 500 || __data.code === 503) { __out += "<a href=\"javascript:location.reload()\" class=\"taand-btn taand-btn--secondary\">Try again</a>"; }__out += "\n    </div>\n  </div>\n</body>\n</html>\n";
-  return { html: __out, slots: __slots, layout: null };
-}

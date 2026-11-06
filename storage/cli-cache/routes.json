@@ -1,1 +1,0 @@
-{"signature":"E:\\templates\\myframework\\TaandJs\\flow\\http.js:1786706316140.0332|E:\\templates\\myframework\\TaandJs\\start\\route.js:1784910769275.7036|E:\\templates\\myframework\\TaandJs\\start\\app.js:1783057710434.1458","data":[{"methods":"GET|HEAD","uri":"/","name":"","action":"HomeController@index","middleware":""}]}

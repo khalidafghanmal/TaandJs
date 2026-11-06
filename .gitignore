@@ -5,20 +5,10 @@ node_modules/
 
 # Build output
 dist/
-docs/
-# Runtime / generated
-var/logs/*
-!var/logs/.gitignore
-var/database/*
-!var/database/.gitignore
-var/view-cache/*
-!var/view-cache/.gitignore
-var/cache/data/*
-var/sessions/*
-var/uploads/*
-!var/uploads/.gitignore
-var/cli-cache/*
-var/mail/outbox/*
+
+# Runtime / generated (keep directories via .gitkeep)
+storage/*/*
+!storage/*/.gitkeep
 
 # Prisma
 schema/*.db

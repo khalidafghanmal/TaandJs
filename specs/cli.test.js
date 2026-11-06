@@ -108,10 +108,14 @@ test('GeneratorEngine creates module scaffold', async () => {
 
 test('make:controller cold start completes under 1 second', async () => {
   const start = Date.now();
-  await execFileAsync(process.execPath, [TAAND_BIN, 'make:controller', 'PerfController', '--force'], {
-    cwd: TAAND_ROOT,
-    env: { ...process.env, TAAND_CLI_NO_DAEMON: '1' },
-  });
+  try {
+    await execFileAsync(process.execPath, [TAAND_BIN, 'make:controller', 'PerfController', '--force'], {
+      cwd: TAAND_ROOT,
+      env: { ...process.env, TAAND_CLI_NO_DAEMON: '1' },
+    });
+  } finally {
+    await fs.rm(path.join(TAAND_ROOT, 'src', 'actions', 'PerfController.js'), { force: true });
+  }
   const elapsed = Date.now() - start;
   assert.ok(elapsed < 2500, `expected <2500ms, got ${elapsed}ms`);
 });

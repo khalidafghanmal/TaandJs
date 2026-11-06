@@ -1,4 +1,10 @@
-const PLACEHOLDER_APP_KEY = 'change-this-to-a-random-32-char-string';
+// Example values from .env.example and the docs.
+const PLACEHOLDER_APP_KEYS = new Set([
+  'change-this-to-a-random-32-char-string',
+  'your-random-32-char-secret',
+  'your-random-32-plus-character-secret',
+]);
+const MIN_APP_KEY_LENGTH = 32;
 const PLACEHOLDER_DB =
   'postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public';
 
@@ -10,8 +16,12 @@ export function assertProductionEnv(config) {
   const database = config.get('database', {});
   const auth = config.get('auth', {});
 
-  if (app.key === PLACEHOLDER_APP_KEY || !app.key?.trim()) {
+  if (PLACEHOLDER_APP_KEYS.has(app.key) || !app.key?.trim()) {
     throw new Error('[Taand] Set TAAND_APP_KEY before running the production server');
+  }
+
+  if (app.env === 'production' && app.key.length < MIN_APP_KEY_LENGTH) {
+    throw new Error(`[Taand] TAAND_APP_KEY must be at least ${MIN_APP_KEY_LENGTH} characters in production`);
   }
 
   if (app.env === 'production' && app.debug) {

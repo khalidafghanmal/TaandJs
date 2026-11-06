@@ -109,7 +109,8 @@ export class ScheduleManager {
     const results = [];
 
     for (const event of due) {
-      const lockKey = `schedule:${event.description || JSON.stringify(event.handler)}`;
+      // Unnamed tasks are keyed by registration order; JSON.stringify drops callbacks and job classes.
+      const lockKey = `schedule:${event.description || `#${this.#events.indexOf(event)}`}`;
       if (event.preventOverlaps && this.app.has('cache')) {
         const locked = await this.app.make('cache').add(lockKey, true, 300);
         if (!locked) continue;
@@ -117,6 +118,8 @@ export class ScheduleManager {
 
       try {
         results.push(await this.#runEvent(event));
+      } catch (error) {
+        results.push({ type: event.handler.type, ok: false, error: error.message });
       } finally {
         if (event.preventOverlaps && this.app.has('cache')) {
           await this.app.make('cache').forget(lockKey);
@@ -152,7 +155,8 @@ export class ScheduleManager {
     }
 
     if (handler.type === 'job') {
-      await this.app.make('queue').dispatch(handler.job).push(handler.payload);
+      const job = new handler.job(this.app, handler.payload);
+      await this.app.make('queue').dispatch(job).push();
       return { type: 'job', job: handler.job?.name, ok: true };
     }
 

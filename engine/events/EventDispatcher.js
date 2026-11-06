@@ -2,7 +2,8 @@ import { normalizeEventName, isWildcard, matchesWildcard } from './EventName.js'
 import { ListenerResolver } from './ListenerResolver.js';
 
 class ListenerEntry {
-  constructor(handler, { priority = 0, async = false, once = false, wildcard = null } = {}) {
+  constructor(handler, { event, priority = 0, async = false, once = false, wildcard = null } = {}) {
+    this.event = event;
     this.handler = handler;
     this.raw = handler;
     this.priority = priority;
@@ -41,13 +42,14 @@ export class EventDispatcher {
 
     const entry = new ListenerEntry(listener, {
       ...options,
+      event: name,
       wildcard: isWildcard(name) ? name : null,
     });
 
     if (isWildcard(name)) {
       this.#wildcards.push({ pattern: name, entry });
       this.#wildcards.sort((a, b) => b.entry.priority - a.entry.priority);
-      return () => this.#deactivate(entry);
+      return () => this.#remove(entry);
     }
 
     if (!this.#listeners.has(name)) {
@@ -58,7 +60,7 @@ export class EventDispatcher {
     list.push(entry);
     list.sort((a, b) => b.priority - a.priority);
 
-    return () => this.#deactivate(entry);
+    return () => this.#remove(entry);
   }
 
   async subscribe(SubscriberClass) {
@@ -127,6 +129,8 @@ export class EventDispatcher {
 
   async #runListener(entry, eventName, eventObject) {
     if (!entry.active) return undefined;
+    // Remove before any await so a concurrent dispatch cannot run it a second time.
+    if (entry.once) this.#remove(entry);
 
     try {
       if (!entry.resolved) {
@@ -143,10 +147,7 @@ export class EventDispatcher {
         return undefined;
       }
 
-      const result = await this.#invoke(entry, eventName, eventObject);
-
-      if (entry.once) entry.active = false;
-      return result;
+      return await this.#invoke(entry, eventName, eventObject);
     } catch (error) {
       await this.#handleListenerError(eventName, error);
       if (this.#config().stopOnFailure) throw error;
@@ -183,7 +184,18 @@ export class EventDispatcher {
     }
   }
 
-  #deactivate(entry) {
+  #remove(entry) {
     entry.active = false;
+
+    if (entry.wildcard) {
+      this.#wildcards = this.#wildcards.filter((w) => w.entry !== entry);
+      return;
+    }
+
+    const list = this.#listeners.get(entry.event);
+    const index = list?.indexOf(entry) ?? -1;
+    if (index === -1) return;
+    list.splice(index, 1);
+    if (list.length === 0) this.#listeners.delete(entry.event);
   }
 }

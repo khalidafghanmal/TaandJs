@@ -88,3 +88,41 @@ test('wildcard listener matches events', async () => {
   assert.equal(matched.length, 1);
   assert.equal(matched[0].name, 'user.created');
 });
+
+test('events unsubscribing frees the listener slot', async () => {
+  const { events } = eventsApp();
+
+  for (let i = 0; i < 60; i += 1) {
+    const off = events.listen('request.handled', () => {});
+    off();
+  }
+  for (let i = 0; i < 60; i += 1) {
+    const off = events.listen('cache.*', () => {});
+    off();
+  }
+
+  assert.equal(events.hasListeners('request.handled'), false);
+});
+
+test('events once listeners are removed after firing', async () => {
+  const { events } = eventsApp();
+
+  for (let i = 0; i < 60; i += 1) {
+    events.listen('job.done', () => {}, { once: true });
+    await events.dispatch('job.done');
+  }
+
+  assert.equal(events.hasListeners('job.done'), false);
+});
+
+test('events once is honoured for async listeners', async () => {
+  const { events } = eventsApp();
+  let calls = 0;
+
+  events.listen('mail.sent', () => { calls += 1; }, { async: true, once: true });
+  await events.dispatch('mail.sent');
+  await events.dispatch('mail.sent');
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(calls, 1);
+});

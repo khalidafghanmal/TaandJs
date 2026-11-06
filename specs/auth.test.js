@@ -31,6 +31,12 @@ test('hasher verify rejects malformed hash', async () => {
   assert.equal(await hasher.verify('secret', 'not-a-hash'), false);
 });
 
+test('hasher verify rejects hashes with an empty or truncated key', async () => {
+  for (const stored of ['$scrypt$c2FsdHNhbHRzYWx0c2FsdA==$', '$scrypt$c2FsdHNhbHRzYWx0c2FsdA==$AA==', '$scrypt$$']) {
+    assert.equal(await hasher.verify('any-password', stored), false, stored);
+  }
+});
+
 test('hasher hash rejects empty string', async () => {
   await assert.rejects(() => hasher.hash(''), /non-empty string/);
 });

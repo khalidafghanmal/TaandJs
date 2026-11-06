@@ -21,7 +21,8 @@ export class MimeBuilder {
       ? this.#buildMixed(message)
       : this.#buildBody(message);
 
-    return `${headers}\r\n${body}`;
+    // A blank line separates the header block from the body (RFC 5322).
+    return `${headers}\r\n\r\n${body}`;
   }
 
   #buildHeaders(message) {
@@ -46,15 +47,9 @@ export class MimeBuilder {
       lines.push(`${MailValidator.sanitizeHeader(key, 'header')}: ${MailValidator.sanitizeHeader(value, key)}`);
     }
 
-    if (message.attachments?.length) {
-      lines.push(`Content-Type: multipart/mixed; boundary="${this.#mixedBoundary}"`);
-    } else if (message.html && message.text) {
-      lines.push(`Content-Type: multipart/alternative; boundary="${this.#boundary}"`);
-    } else if (message.html) {
-      lines.push(`Content-Type: text/html; charset=UTF-8`);
-    } else {
-      lines.push(`Content-Type: text/plain; charset=UTF-8`);
-    }
+    lines.push(message.attachments?.length
+      ? `Content-Type: multipart/mixed; boundary="${this.#mixedBoundary}"`
+      : this.#bodyContentType(message));
 
     return lines.join('\r\n');
   }
@@ -62,9 +57,9 @@ export class MimeBuilder {
   #buildMixed(message) {
     const parts = [
       `--${this.#mixedBoundary}`,
-      `Content-Type: multipart/alternative; boundary="${this.#boundary}"`,
+      this.#bodyContentType(message),
       '',
-      this.#buildBody(message, false),
+      this.#buildBody(message),
     ];
 
     for (const file of message.attachments) {
@@ -76,7 +71,7 @@ export class MimeBuilder {
         `Content-Transfer-Encoding: base64`,
         `Content-Disposition: attachment; filename="${filename}"`,
         '',
-        content.toString('base64'),
+        content.toString('base64').replace(/.{76}(?=.)/g, '$&\r\n'),
       );
     }
 
@@ -84,25 +79,14 @@ export class MimeBuilder {
     return parts.join('\r\n');
   }
 
-  #buildBody(message, includeHeaders = true) {
-    if (message.html && message.text) {
-      const parts = [];
-      if (includeHeaders) return this.#multipartAlternative(message);
+  #bodyContentType(message) {
+    if (message.html && message.text) return `Content-Type: multipart/alternative; boundary="${this.#boundary}"`;
+    if (message.html) return 'Content-Type: text/html; charset=UTF-8';
+    return 'Content-Type: text/plain; charset=UTF-8';
+  }
 
-      parts.push(
-        `--${this.#boundary}`,
-        `Content-Type: text/plain; charset=UTF-8`,
-        '',
-        message.text,
-        `--${this.#boundary}`,
-        `Content-Type: text/html; charset=UTF-8`,
-        '',
-        message.html,
-        `--${this.#boundary}--`,
-      );
-      return parts.join('\r\n');
-    }
-
+  #buildBody(message) {
+    if (message.html && message.text) return this.#multipartAlternative(message);
     if (message.html) return message.html;
     return message.text ?? '';
   }

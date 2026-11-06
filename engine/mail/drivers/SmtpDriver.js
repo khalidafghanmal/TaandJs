@@ -20,6 +20,8 @@ export class SmtpDriver {
   #pass;
   #secure;
   #timeout;
+  // Unconsumed reply bytes per socket: a TCP chunk can hold part of a reply or the start of the next one.
+  #buffers = new WeakMap();
 
   async send(message, raw) {
     let socket = await this.#connect();
@@ -121,20 +123,32 @@ export class SmtpDriver {
 
   #expect(socket, code) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('[Taand] SMTP response timed out')), this.#timeout);
+      let buffer = this.#buffers.get(socket) ?? '';
 
-      const onData = (chunk) => {
+      const finish = (error, response) => {
         clearTimeout(timer);
         socket.off('data', onData);
-        const response = chunk.toString();
-        if (!response.startsWith(String(code))) {
-          reject(new Error(`[Taand] SMTP error: ${response.trim()}`));
-          return;
-        }
-        resolve(response);
+        return error ? reject(error) : resolve(response);
       };
 
+      const onData = (chunk = '') => {
+        buffer += chunk.toString();
+        // A reply is complete at the first line without a "-" continuation ("250-..." lines precede "250 ...").
+        const match = buffer.match(/^(?:\d{3}-[^\n]*\n)*\d{3}(?: [^\n]*)?\r?\n/);
+        if (!match) return;
+
+        const response = match[0];
+        this.#buffers.set(socket, buffer.slice(response.length));
+        if (!response.startsWith(String(code))) {
+          finish(new Error(`[Taand] SMTP error: ${response.trim()}`));
+          return;
+        }
+        finish(null, response);
+      };
+
+      const timer = setTimeout(() => finish(new Error('[Taand] SMTP response timed out')), this.#timeout);
       socket.on('data', onData);
+      onData();
     });
   }
 }

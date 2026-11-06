@@ -71,6 +71,35 @@ test('ThrottleRequests sets rate limit headers', async () => {
   assert.equal(res.headers['X-RateLimit-Limit'], '5');
 });
 
+test('ThrottleRequests in-memory buckets are bounded and expired ones go first', async () => {
+  const { app } = miniApp();
+  const ok = async () => Response.text('ok');
+  const previous = ThrottleRequests.maxFallbackBuckets;
+  ThrottleRequests.maxFallbackBuckets = 3;
+
+  try {
+    const short = new ThrottleRequests(app, 5, 0.0005); // 30ms window
+    const live = new ThrottleRequests(app, 1, 1);
+
+    for (let i = 0; i < 50; i++) {
+      await short.handle(req(`/flood/${i}`, { ip: '10.7.0.1' }), ok);
+    }
+    assert.ok(ThrottleRequests.fallbackSize <= 3);
+
+    await live.handle(req('/live', { ip: '10.7.0.2' }), ok);
+    assert.equal((await live.handle(req('/live', { ip: '10.7.0.2' }), ok)).status, 429);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await short.handle(req('/flood/a', { ip: '10.7.0.1' }), ok);
+    await short.handle(req('/flood/b', { ip: '10.7.0.1' }), ok);
+
+    assert.ok(ThrottleRequests.fallbackSize <= 3);
+    assert.equal((await live.handle(req('/live', { ip: '10.7.0.2' }), ok)).status, 429);
+  } finally {
+    ThrottleRequests.maxFallbackBuckets = previous;
+  }
+});
+
 test('CsrfProtection rejects POST without token', async () => {
   const sessions = {
     store: { _csrf: 'abc123' },

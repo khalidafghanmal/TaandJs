@@ -6,6 +6,7 @@ import { Response } from '../http/Response.js';
  */
 export class ThrottleRequests extends Middleware {
   static #fallbackHits = new Map();
+  static maxFallbackBuckets = 10_000;
 
   constructor(app, maxAttempts = 60, decayMinutes = 1) {
     super(app);
@@ -41,9 +42,32 @@ export class ThrottleRequests extends Middleware {
     return this.#handleInMemory(request, next, key);
   }
 
+  static get fallbackSize() {
+    return ThrottleRequests.#fallbackHits.size;
+  }
+
+  // Drop expired buckets first; if still full, drop the oldest.
+  // ponytail: per-process cap — a flood of new keys can evict an old bucket; configure the
+  // cache-backed rateLimiter (redis) when hard limits matter.
+  static #evict(now) {
+    const hits = ThrottleRequests.#fallbackHits;
+    for (const [key, bucket] of hits) {
+      if (now > bucket.resetAt) hits.delete(key);
+    }
+    while (hits.size > 0 && hits.size >= ThrottleRequests.maxFallbackBuckets) {
+      hits.delete(hits.keys().next().value);
+    }
+  }
+
   async #handleInMemory(request, next, key) {
     const now = Date.now();
     const decayMs = this.decaySeconds * 1000;
+
+    if (!ThrottleRequests.#fallbackHits.has(key)
+      && ThrottleRequests.#fallbackHits.size >= ThrottleRequests.maxFallbackBuckets) {
+      ThrottleRequests.#evict(now);
+    }
+
     const bucket = ThrottleRequests.#fallbackHits.get(key) ?? { count: 0, resetAt: now + decayMs };
 
     if (now > bucket.resetAt) {

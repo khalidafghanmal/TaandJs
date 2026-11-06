@@ -229,7 +229,13 @@ test('assertDevDashboard requires dashboard key when configured', () => {
     (err) => err.status === 403,
   );
 
-  const withKey = req('/__Taand/cache?dashboard_key=dev-secret');
+  // The key leaks into logs, history and Referer from a URL — header only.
+  assert.throws(
+    () => assertDevDashboard(app, req('/__Taand/cache?dashboard_key=dev-secret')),
+    (err) => err.status === 403,
+  );
+
+  const withKey = req('/__Taand/cache', { headers: { 'x-taand-dev-key': 'dev-secret' } });
   assert.doesNotThrow(() => assertDevDashboard(app, withKey));
 });
 

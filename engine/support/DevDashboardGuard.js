@@ -21,10 +21,8 @@ export function assertDevDashboard(app, request) {
 
   const key = config.get('app.devDashboardKey', '');
   if (key) {
-    const provided =
-      request.query.dashboard_key
-      ?? request.header('x-taand-dev-key')
-      ?? '';
+    // Header only: a key in the query string ends up in logs, history and Referer.
+    const provided = request.header('x-taand-dev-key') ?? '';
     if (!secureCompare(provided, key)) {
       throw HttpError.forbidden('Invalid dev dashboard key');
     }

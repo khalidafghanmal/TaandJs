@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Middleware } from '../Middleware.js';
 import { Response } from '../../http/Response.js';
+import { secureCompare } from '../../support/secureCompare.js';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const COOKIE = 'XSRF-TOKEN';
@@ -16,7 +17,13 @@ export class CsrfProtection extends Middleware {
       const submitted = request.input('_token') ?? request.header('x-csrf-token');
       const cookie = request.cookies()[COOKIE];
 
-      if (!submitted || !cookie || submitted !== cookie || submitted !== token) {
+      if (
+        typeof submitted !== 'string'
+        || !submitted
+        || !cookie
+        || !secureCompare(submitted, cookie)
+        || !secureCompare(submitted, token)
+      ) {
         return this.app.make('errors').respond(request, 419);
       }
     }

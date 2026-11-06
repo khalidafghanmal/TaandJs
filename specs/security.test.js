@@ -1,4 +1,5 @@
 import test from 'node:test';
+import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import { Redirect } from '../engine/http/Redirect.js';
 import { Response } from '../engine/http/Response.js';
@@ -283,4 +284,38 @@ test('can fails closed without authenticated user', async () => {
   const { authorize } = await import('../start/can.js');
   assert.equal(await can('admin'), false);
   await assert.rejects(() => authorize('admin'), (err) => err.status === 403);
+});
+
+test('CsrfProtection compares tokens in constant time', async () => {
+  const token = 'a'.repeat(64);
+  const sessions = {
+    store: { _csrf: token },
+    get(_s, key) { return this.store[key]; },
+    put(_s, key, val) { this.store[key] = val; },
+  };
+  const { app } = miniApp({ session: sessions });
+  const mw = new CsrfProtection(app);
+
+  const original = crypto.timingSafeEqual;
+  let calls = 0;
+  crypto.timingSafeEqual = (...args) => {
+    calls++;
+    return original(...args);
+  };
+
+  try {
+    const forged = await reqBody(
+      'POST',
+      '/form',
+      { _token: `${'a'.repeat(63)}b` },
+      'application/x-www-form-urlencoded',
+      { cookie: `XSRF-TOKEN=${'a'.repeat(63)}b` },
+    );
+    forged.setAttribute('_session', 'sess1');
+    const res = await mw.handle(forged, async () => Response.text('ok'));
+    assert.equal(res.status, 419);
+    assert.ok(calls > 0, 'expected crypto.timingSafeEqual to be used');
+  } finally {
+    crypto.timingSafeEqual = original;
+  }
 });

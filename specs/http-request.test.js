@@ -115,3 +115,12 @@ test('request input priority form over query', async () => {
   const r = await reqBody('POST', '/?name=query', { name: 'form' }, 'application/x-www-form-urlencoded');
   assert.equal(r.input('name'), 'form');
 });
+
+test('request sanitize does not turn a JSON __proto__ key into inherited input', async () => {
+  const r = await reqBody('POST', '/', JSON.parse('{"name":" x ","__proto__":{"role":"admin"}}'));
+  r.sanitize();
+  assert.equal(r.json().name, 'x');
+  assert.equal(r.input('role'), null);
+  assert.equal(r.json().role, undefined);
+  assert.equal(Object.getPrototypeOf(r.json()), Object.prototype);
+});

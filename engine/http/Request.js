@@ -181,11 +181,11 @@ export class Request {
     }
 
     if (data && typeof data === 'object') {
-      const next = {};
-      for (const [key, value] of Object.entries(data)) {
-        next[key] = Request.#trimValues(value);
-      }
-      return next;
+      // fromEntries defines own properties; `next[key] = …` would run the __proto__ setter
+      // for a JSON "__proto__" key and make its fields readable through input().
+      return Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, Request.#trimValues(value)]),
+      );
     }
 
     return typeof data === 'string' ? data.trim() : data;

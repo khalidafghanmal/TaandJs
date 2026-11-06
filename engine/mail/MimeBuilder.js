@@ -28,7 +28,7 @@ export class MimeBuilder {
     const lines = [
       `From: ${MailValidator.formatAddress(message.from)}`,
       `To: ${message.to.map((a) => MailValidator.formatAddress(a)).join(', ')}`,
-      `Subject: ${MailValidator.sanitizeHeader(message.subject, 'Subject')}`,
+      `Subject: ${MailValidator.encodeWord(MailValidator.sanitizeHeader(message.subject, 'Subject'))}`,
       `Date: ${new Date().toUTCString()}`,
       `MIME-Version: 1.0`,
       `Message-ID: <${crypto.randomBytes(16).toString('hex')}@Taand.local>`,

@@ -1,5 +1,6 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CRLF_RE = /[\r\n]/;
+const NON_ASCII_RE = /[^\x20-\x7e]/;
 
 /**
  * Email validation and header-injection prevention.
@@ -49,11 +50,20 @@ export class MailValidator {
   }
 
   static formatAddress({ name, email }) {
-    if (name) {
-      const safe = name.replace(/"/g, "'");
-      return `"${safe}" <${email}>`;
+    if (!name) return email;
+    if (NON_ASCII_RE.test(name)) return `${MailValidator.encodeWord(name)} <${email}>`;
+    return `"${name.replace(/[\\"]/g, '\\$&')}" <${email}>`;
+  }
+
+  // RFC 2047 UTF-8 base64 encoded-words, split on character boundaries and folded so each line stays short.
+  static encodeWord(text) {
+    if (!NON_ASCII_RE.test(text)) return text;
+    const chunks = [''];
+    for (const char of text) {
+      if (Buffer.byteLength(chunks.at(-1) + char) > 39) chunks.push('');
+      chunks[chunks.length - 1] += char;
     }
-    return email;
+    return chunks.map((chunk) => `=?UTF-8?B?${Buffer.from(chunk).toString('base64')}?=`).join('\r\n ');
   }
 
   static #normalizeAddress(address) {

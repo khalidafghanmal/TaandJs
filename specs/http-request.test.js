@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Request } from '../engine/http/Request.js';
+import { ErrorRenderer } from '../engine/http/ErrorRenderer.js';
+import { Application } from '../engine/core/Application.js';
 import { req, reqBody } from './helpers/setup.js';
 
 test('request path from url', () => {
@@ -114,4 +116,22 @@ test('request GET has empty body', () => {
 test('request input priority form over query', async () => {
   const r = await reqBody('POST', '/?name=query', { name: 'form' }, 'application/x-www-form-urlencoded');
   assert.equal(r.input('name'), 'form');
+});
+
+test('Application.handleRequest hides 5xx parse errors unless debug', async () => {
+  const { Application } = await import('../engine/core/Application.js');
+  const { ErrorRenderer } = await import('../engine/http/ErrorRenderer.js');
+  const app = new Application(process.cwd());
+  app.instance('errors', new ErrorRenderer(app));
+  app.make('config').merge({ app: { debug: false } });
+
+  // A malformed Host header makes URL parsing throw TypeError("Invalid URL") — a 500.
+  const raw = { method: 'GET', url: '/', headers: { host: 'bad host', accept: 'application/json' } };
+  const { response } = await app.handleRequest(raw);
+  assert.equal(response.status, 500);
+  assert.doesNotMatch(response.body, /Invalid URL/);
+
+  app.make('config').merge({ app: { debug: true } });
+  const debug = await app.handleRequest(raw);
+  assert.match(debug.response.body, /Invalid URL/);
 });

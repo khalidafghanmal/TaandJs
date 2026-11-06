@@ -4,6 +4,20 @@
   "description": "TaandJs — a fast, secure, developer-friendly JavaScript framework",
   "type": "module",
   "main": "engine/index.js",
+  "files": [
+    "bin",
+    "engine",
+    "start",
+    "settings",
+    "src",
+    "flow",
+    "ui",
+    "web",
+    "schema",
+    "records",
+    "packages/create-taand/lib",
+    ".env.example"
+  ],
   "bin": {
     "taand": "bin/taand.js",
     "create-taand": "bin/create.js"

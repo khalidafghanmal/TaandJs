@@ -94,10 +94,13 @@ export const rules = {
   },
 
   in(value, params) {
+    // String(['admin']) === 'admin', so arrays/objects must not reach the comparison.
+    if (typeof value === 'object' && value !== null) return 'in';
     return params.includes(String(value)) || 'in';
   },
 
   not_in(value, params) {
+    if (typeof value === 'object' && value !== null) return 'not_in';
     return !params.includes(String(value)) || 'not_in';
   },
 

@@ -132,3 +132,21 @@ test('validator custom messages', async () => {
 
 test('min numeric value', () => assert.equal(rules.min(10, ['5']), true));
 test('max numeric value fail', () => assert.equal(rules.max(10, ['5']), 'max'));
+
+test('in and not_in reject arrays and objects', async () => {
+  assert.equal(rules.in(['user'], ['user', 'editor']), 'in');
+  assert.equal(rules.in({ toString: () => 'user' }, ['user']), 'in');
+  assert.equal(rules.not_in(['admin', ''], ['admin']), 'not_in');
+
+  const { validator } = miniApp();
+  await assert.rejects(
+    () => validator.make({ role: ['editor'] }, { role: 'required|in:user,editor' }),
+    ValidationError,
+  );
+  await assert.rejects(
+    () => validator.make({ role: ['admin', 'x'] }, { role: 'required|not_in:admin' }),
+    ValidationError,
+  );
+  assert.deepEqual(await validator.make({ role: 'editor' }, { role: 'required|in:user,editor' }), { role: 'editor' });
+  assert.deepEqual(await validator.make({ qty: 2 }, { qty: 'in:1,2,3' }), { qty: 2 });
+});

@@ -54,6 +54,12 @@ export class MemoryDriver {
     return this.#remove(key);
   }
 
+  async forgetIf(key, value) {
+    const entry = this.#store.get(key);
+    if (!entry || isExpired(entry.expires) || entry.value !== value) return false;
+    return this.#remove(key);
+  }
+
   async flush() {
     this.#store.clear();
     this.#bytes = 0;

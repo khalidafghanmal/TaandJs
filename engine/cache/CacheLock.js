@@ -34,13 +34,10 @@ export class CacheLock {
 
   async release() {
     if (!this.#acquired) return false;
-    const value = await this.#driver.get(this.#key);
-    if (value === this.#owner) {
-      await this.#driver.forget(this.#key);
-      this.#acquired = false;
-      return true;
-    }
-    return false;
+    // Check-and-delete must be one driver step: the lock may expire and be re-acquired in between.
+    const released = await this.#driver.forgetIf(this.#key, this.#owner);
+    if (released) this.#acquired = false;
+    return released;
   }
 
   owner() {

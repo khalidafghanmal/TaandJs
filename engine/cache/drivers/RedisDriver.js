@@ -1,5 +1,15 @@
 import { serializeValue, deserializeValue, ttlToExpiry, isExpired } from '../CacheSerializer.js';
 
+// Delete the key only if its stored value still matches, atomically on the server.
+const FORGET_IF_SCRIPT = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 0 end
+local ok, entry = pcall(cjson.decode, raw)
+if ok and type(entry) == 'table' then entry = entry.value end
+if tostring(entry) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
+return 0
+`;
+
 /**
  * Redis cache driver — shared across processes, production multi-server ready.
  */
@@ -61,6 +71,12 @@ export class RedisDriver {
 
   async forget(key) {
     const deleted = await this.#redis().del(key);
+    return deleted > 0;
+  }
+
+  async forgetIf(key, value) {
+    const client = await this.#redis().raw();
+    const deleted = await client.eval(FORGET_IF_SCRIPT, { keys: [key], arguments: [String(value)] });
     return deleted > 0;
   }
 

@@ -99,3 +99,69 @@ test('cache null driver discards values', async () => {
   await cache.put('x', 'y');
   assert.equal(await cache.has('x'), false);
 });
+
+async function lockDrivers() {
+  const { MemoryDriver } = await import('../engine/cache/drivers/MemoryDriver.js');
+  const { RedisDriver } = await import('../engine/cache/drivers/RedisDriver.js');
+  const data = new Map();
+  const client = {
+    // Stand-in for the compare-and-delete Lua script: delete only when the stored value matches.
+    async eval(_script, { keys: [key], arguments: [owner] }) {
+      const raw = data.get(key);
+      if (raw === undefined || String(JSON.parse(raw).value) !== owner) return 0;
+      data.delete(key);
+      return 1;
+    },
+  };
+  const connection = {
+    get: async (key) => data.get(key) ?? null,
+    set: async (key, value) => { data.set(key, value); return 'OK'; },
+    setEx: async (key, _seconds, value) => { data.set(key, value); return 'OK'; },
+    del: async (key) => (data.delete(key) ? 1 : 0),
+    prefix: () => '',
+    raw: async () => client,
+  };
+  return {
+    memory: new MemoryDriver(),
+    redis: new RedisDriver({ make: () => ({ connection: () => connection }) }, { connection: 'cache' }),
+  };
+}
+
+for (const name of ['memory', 'redis']) {
+  test(`${name} lock release does not delete a lock re-acquired by another owner`, async () => {
+    const { CacheLock } = await import('../engine/cache/CacheLock.js');
+    const driver = (await lockDrivers())[name];
+    const lock = new CacheLock(driver, 'job', 10, 'owner-a');
+    assert.equal(await lock.get(), true);
+
+    // A's lock expires and owner B takes it right after release() first touches the driver.
+    // A non-atomic get-then-forget would then delete B's lock.
+    const realGet = driver.get.bind(driver);
+    let takenOver = false;
+    for (const method of ['get', 'forgetIf']) {
+      const real = driver[method]?.bind(driver);
+      if (!real) continue;
+      driver[method] = async (...args) => {
+        const result = await real(...args);
+        if (!takenOver) {
+          takenOver = true;
+          await driver.forget('__lock:job');
+          await driver.put('__lock:job', 'owner-b', 10);
+        }
+        return result;
+      };
+    }
+
+    await lock.release();
+    assert.equal(await realGet('__lock:job'), 'owner-b');
+  });
+
+  test(`${name} lock release frees a lock it still owns`, async () => {
+    const { CacheLock } = await import('../engine/cache/CacheLock.js');
+    const driver = (await lockDrivers())[name];
+    const lock = new CacheLock(driver, 'job', 10, 'owner-a');
+    assert.equal(await lock.get(), true);
+    assert.equal(await lock.release(), true);
+    assert.equal(await new CacheLock(driver, 'job', 10, 'owner-b').get(), true);
+  });
+}

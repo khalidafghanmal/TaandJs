@@ -3,6 +3,7 @@ export class NullDriver {
   async put() { return true; }
   async add() { return true; }
   async forget() { return true; }
+  async forgetIf() { return true; }
   async flush() { return true; }
   async increment() { return 0; }
   async keys() { return []; }

@@ -72,6 +72,11 @@ export class FileDriver {
     }
   }
 
+  async forgetIf(key, value) {
+    if ((await this.get(key)) !== value) return false;
+    return this.forget(key);
+  }
+
   async flush() {
     this.#index.clear();
     await this.#clearDir(this.#dir);

@@ -1,6 +1,6 @@
 # Database (Prisma)
 
-TaandJs ships with **Prisma ORM** pre-installed — fullstack out of the box. **PostgreSQL** is the default; use SQLite or MySQL if you prefer a file-based local setup.
+TaandJs ships with **Prisma ORM** pre-installed — fullstack out of the box. **SQLite** is the default (no database server needed); switch to PostgreSQL or MySQL for production.
 
 ## What's included
 
@@ -21,9 +21,8 @@ Default schema includes a **`User`** model (auth, roles, admin). Add your own mo
 ```bash
 cd Taand
 cp .env.example .env
-npm run docker:up      # optional — local Postgres + Redis (see docs/docker.md)
 npm install            # runs prisma generate via postinstall
-npm run db:migrate     # creates tables (local dev)
+npm run db:migrate     # creates storage/database/taand.db (local dev)
 npm run dev
 ```
 
@@ -31,23 +30,31 @@ npm run dev
 
 ## Environment
 
+The committed schema (`provider = "sqlite"`) and migrations target SQLite. Defaults from `.env.example`:
+
 ```env
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
-DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
-DB_CONNECTION=postgresql
+DB_CONNECTION=sqlite
+DATABASE_URL="file:../storage/database/taand.db"
+DIRECT_URL="file:../storage/database/taand.db"
 ```
 
-Create the database before migrating (`createdb Taand` on macOS/Linux, or via pgAdmin on Windows).
+`file:` paths are resolved relative to `schema/`, so the database lives in `storage/database/`.
+
+### Switching to PostgreSQL
+
+1. Set `provider = "postgresql"` in `schema/schema.prisma`
+2. Set the Postgres URLs in `.env`:
+   ```env
+   DB_CONNECTION=postgresql
+   DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
+   DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
+   ```
+3. Create the database (`createdb taand` on macOS/Linux, or via pgAdmin on Windows)
+4. The committed migrations are SQLite SQL and the lock file pins `sqlite`, so remove `schema/migrations/` and run `npm run db:migrate` to generate PostgreSQL migrations
 
 ### Neon / pooled PostgreSQL
 
 Use the **pooled** connection string for `DATABASE_URL` and the **direct** (non-`-pooler`) string for `DIRECT_URL` when running migrations.
-
-### SQLite (optional local dev)
-
-1. Change `provider = "sqlite"` in `schema/schema.prisma` and remove `directUrl`
-2. Set `DATABASE_URL="file:../storage/database/taand.db"` in `.env`
-3. Remove `schema/migrations/` and run `npm run db:migrate` to start fresh
 
 ---
 
@@ -180,7 +187,7 @@ Designed for session/API auth and `role:admin` middleware. Hash passwords before
 | Singleton client | One connection pool per process |
 | Compiled queries | Prisma query engine |
 | Lazy connect | Connects on app bootstrap |
-| PostgreSQL default | Production-ready from day one |
+| SQLite default, PostgreSQL ready | Zero-setup local dev; switch provider for production |
 
 For production at scale, use PostgreSQL and connection pooling (PgBouncer or Prisma Accelerate).
 

@@ -87,6 +87,7 @@ export function normalizeSettings(raw) {
       priority: raw.http?.priority ?? [],
     },
     cors: raw.http?.crossOrigin ?? {},
+    hsts: security.hsts ?? {},
     database: raw.data?.primary ?? {},
     redis: raw.data?.redis ?? {},
     auth: {

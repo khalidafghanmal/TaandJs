@@ -9,8 +9,16 @@ export class SecurityHeaders extends Middleware {
     return next(request);
   }
 
-  async terminate(_request, response) {
+  async terminate(request, response) {
     if (!(response instanceof Response)) return;
+
+    // Browsers ignore HSTS over plain HTTP, and sending it from local dev would pin localhost.
+    const hsts = this.app.make('config').get('hsts', {}) ?? {};
+    if (hsts.enabled && request.secure()) {
+      response.headers['Strict-Transport-Security'] ??= hsts.includeSubDomains
+        ? `max-age=${hsts.maxAge ?? 31536000}; includeSubDomains`
+        : `max-age=${hsts.maxAge ?? 31536000}`;
+    }
 
     response.headers['Content-Security-Policy'] ??= "default-src 'self'; frame-ancestors 'none'";
     response.headers['Permissions-Policy'] ??= 'camera=(), microphone=(), geolocation=()';

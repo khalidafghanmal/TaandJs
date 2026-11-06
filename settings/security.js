@@ -4,6 +4,13 @@ import { env } from '../engine/core/Env.js';
 export default {
   defaultMode: 'browser',
 
+  /** Strict-Transport-Security — sent only on HTTPS requests (direct TLS or trusted proxy). */
+  hsts: {
+    enabled: env('TAAND_HSTS', env('TAAND_ENV', 'local') === 'production' ? 'true' : 'false') === 'true',
+    maxAge: Number(env('TAAND_HSTS_MAX_AGE', '31536000')),
+    includeSubDomains: env('TAAND_HSTS_INCLUDE_SUBDOMAINS', 'false') === 'true',
+  },
+
   browser: {
     session: {
       driver: env('SESSION_DRIVER', env('REDIS_URL', '') ? 'redis' : 'file'),

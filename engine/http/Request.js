@@ -152,6 +152,11 @@ export class Request {
       ?? '127.0.0.1';
   }
 
+  /** HTTPS — direct TLS, or X-Forwarded-Proto from a trusted proxy (set by TrustProxies). */
+  secure() {
+    return Boolean(this.attribute('_secure') || this.#raw.socket?.encrypted);
+  }
+
   /** Direct TCP peer — never spoofable via X-Forwarded-For. */
   remoteAddress() {
     return this.#raw.socket?.remoteAddress ?? '127.0.0.1';

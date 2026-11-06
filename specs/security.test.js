@@ -4,6 +4,9 @@ import { Redirect } from '../engine/http/Redirect.js';
 import { Response } from '../engine/http/Response.js';
 import { SecurityHeaders } from '../engine/middleware/global/SecurityHeaders.js';
 import { ThrottleRequests } from '../engine/middleware/ThrottleRequests.js';
+import { TrustProxies } from '../engine/middleware/TrustProxies.js';
+import { Request } from '../engine/http/Request.js';
+import { normalizeSettings } from '../engine/core/SettingsLoader.js';
 import { CsrfProtection } from '../engine/middleware/web/CsrfProtection.js';
 import { miniApp, req, reqBody } from './helpers/setup.js';
 
@@ -283,4 +286,30 @@ test('can fails closed without authenticated user', async () => {
   const { authorize } = await import('../start/can.js');
   assert.equal(await can('admin'), false);
   await assert.rejects(() => authorize('admin'), (err) => err.status === 403);
+});
+
+async function hstsFor(request, hsts) {
+  const { app } = miniApp({ config: { hsts, app: { trustedProxies: ['10.0.0.1'] } } });
+  await new TrustProxies(app).handle(request, async () => Response.text('ok'));
+  const response = Response.text('ok');
+  await new SecurityHeaders(app).terminate(request, response);
+  return response.headers['Strict-Transport-Security'];
+}
+
+test('SecurityHeaders sends HSTS only on HTTPS when enabled', async () => {
+  const on = { enabled: true, maxAge: 31536000, includeSubDomains: true };
+  const viaProxy = (ip, proto) => req('/', { ip, headers: { 'x-forwarded-proto': proto } });
+  const tls = new Request({ method: 'GET', url: '/', headers: { host: 'x' }, socket: { remoteAddress: '203.0.113.9', encrypted: true } });
+
+  assert.equal(await hstsFor(viaProxy('10.0.0.1', 'https'), on), 'max-age=31536000; includeSubDomains');
+  assert.equal(await hstsFor(tls, { enabled: true, maxAge: 600 }), 'max-age=600');
+  assert.equal(await hstsFor(viaProxy('10.0.0.1', 'http'), on), undefined);
+  assert.equal(await hstsFor(viaProxy('203.0.113.9', 'https'), on), undefined);
+  assert.equal(await hstsFor(viaProxy('10.0.0.1', 'https'), { enabled: false }), undefined);
+  assert.equal(await hstsFor(viaProxy('10.0.0.1', 'https'), undefined), undefined);
+});
+
+test('HSTS settings flow from settings/security.js into the registry', () => {
+  const registry = normalizeSettings({ security: { hsts: { enabled: true, maxAge: 5 } } });
+  assert.deepEqual(registry.hsts, { enabled: true, maxAge: 5 });
 });

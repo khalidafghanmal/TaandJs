@@ -14,6 +14,12 @@ export class TrustProxies extends Middleware {
     const trusted = this.app.make('config').get('app.trustedProxies', []);
 
     if (Array.isArray(trusted) && trusted.length > 0 && trusted.includes(remote)) {
+      // The last value is the one our proxy set; earlier ones may come from the client.
+      const proto = request.header('x-forwarded-proto')?.split(',').pop().trim().toLowerCase();
+      if (proto === 'https') {
+        request.setAttribute('_secure', true);
+      }
+
       const forwarded = request.header('x-forwarded-for');
       if (forwarded) {
         const ip = forwarded.split(',')[0].trim();

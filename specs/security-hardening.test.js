@@ -81,6 +81,25 @@ test('TrustProxies trusts X-Forwarded-For only from configured proxies', async (
   assert.equal(request.ip(), '198.51.100.10');
 });
 
+test('TrustProxies ignores client-supplied leftmost X-Forwarded-For entries', async () => {
+  const { app } = miniApp({
+    config: { app: { trustedProxies: ['10.0.0.1', '10.0.0.2'] } },
+  });
+  const mw = new TrustProxies(app);
+  const ipFor = async (forwarded) => {
+    const request = req('/api', { ip: '10.0.0.1', headers: { 'x-forwarded-for': forwarded } });
+    await mw.handle(request, async () => Response.text('ok'));
+    return request.ip();
+  };
+
+  // Proxy appends the real peer; anything to its left is attacker-controlled.
+  assert.equal(await ipFor('6.6.6.6, 203.0.113.7'), '203.0.113.7');
+  assert.equal(await ipFor('6.6.6.6, 203.0.113.7, 10.0.0.2'), '203.0.113.7');
+  assert.equal(await ipFor('::ffff:203.0.113.7'), '203.0.113.7');
+  assert.equal(await ipFor('6.6.6.6, not-an-ip'), '10.0.0.1');
+  assert.equal(await ipFor('10.0.0.2'), '10.0.0.1');
+});
+
 test('Request.remoteAddress is not affected by TrustProxies', async () => {
   const { app } = miniApp({
     config: { app: { trustedProxies: ['10.0.0.1'] } },

@@ -13,7 +13,11 @@ export class CsrfProtection extends Middleware {
     const token = this.#token(request);
 
     if (MUTATING.has(request.method)) {
-      const submitted = request.input('_token') ?? request.header('x-csrf-token');
+      // Body or header only — a token in the query string leaks via logs and Referer.
+      const submitted = request.form()._token
+        ?? request.json()._token
+        ?? request.header('x-csrf-token')
+        ?? request.header('x-xsrf-token');
       const cookie = request.cookies()[COOKIE];
 
       if (!submitted || !cookie || submitted !== cookie || submitted !== token) {

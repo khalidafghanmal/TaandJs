@@ -1,7 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { deserializeValue, hashKey, isExpired, serializeValue, ttlToExpiry } from '../CacheSerializer.js';
 import { resolveCachePath } from '../resolveCachePath.js';
+
+const LOCK_RETRY_MS = 5;
+const LOCK_STALE_MS = 10_000;
+const LOCK_DENIED_RETRIES = 100;
 
 /**
  * File cache driver — persistent, atomic writes, hashed paths.
@@ -45,19 +50,21 @@ export class FileDriver {
       key,
     });
 
-    const tmp = `${file}.${process.pid}.tmp`;
+    const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
     await fs.promises.mkdir(path.dirname(file), { recursive: true, mode: 0o750 });
     await fs.promises.writeFile(tmp, payload, { encoding: 'utf8', mode: 0o640 });
-    await fs.promises.rename(tmp, file);
+    await this.#rename(tmp, file);
 
     this.#index.set(key, { file, expires: ttlToExpiry(ttl), size: payload.length });
     return true;
   }
 
   async add(key, value, ttl = null) {
-    if ((await this.get(key)) !== undefined) return false;
-    await this.put(key, value, ttl);
-    return true;
+    return this.#withLock(key, async () => {
+      if ((await this.get(key)) !== undefined) return false;
+      await this.put(key, value, ttl);
+      return true;
+    });
   }
 
   async forget(key) {
@@ -79,6 +86,10 @@ export class FileDriver {
   }
 
   async increment(key, amount = 1, ttl = null) {
+    return this.#withLock(key, () => this.#increment(key, amount, ttl));
+  }
+
+  async #increment(key, amount, ttl) {
     const file = this.#fileFor(key);
     let current = 0;
     let nextTtl = ttl;
@@ -125,6 +136,55 @@ export class FileDriver {
       }
     });
     return { entries, bytes };
+  }
+
+  /** Serialise read-modify-write ops on one key across processes via an exclusive lock file. */
+  async #withLock(key, fn) {
+    const lock = `${this.#fileFor(key)}.lock`;
+    await fs.promises.mkdir(path.dirname(lock), { recursive: true, mode: 0o750 });
+
+    let denied = 0;
+    while (true) {
+      try {
+        await (await fs.promises.open(lock, 'wx', 0o640)).close();
+        break;
+      } catch (err) {
+        if (err.code === 'EEXIST') {
+          denied = 0;
+          // A lock older than LOCK_STALE_MS was left behind by a crashed process.
+          const stat = await fs.promises.stat(lock).catch(() => null);
+          if (stat && Date.now() - stat.mtimeMs > LOCK_STALE_MS) {
+            await fs.promises.unlink(lock).catch(() => {});
+            continue;
+          }
+        } else if (!['EPERM', 'EACCES'].includes(err.code) || ++denied > LOCK_DENIED_RETRIES) {
+          // Windows briefly reports EPERM while a just-released lock file is still being deleted.
+          throw err;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
+    }
+
+    try {
+      return await fn();
+    } finally {
+      await fs.promises.unlink(lock).catch(() => {});
+    }
+  }
+
+  async #rename(from, to) {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await fs.promises.rename(from, to);
+      } catch (err) {
+        // Windows rejects replacing a file that another rename is replacing at the same moment.
+        if (!['EPERM', 'EACCES', 'EBUSY'].includes(err.code) || attempt >= LOCK_DENIED_RETRIES) {
+          await fs.promises.unlink(from).catch(() => {});
+          throw err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
+      }
+    }
   }
 
   #fileFor(key) {

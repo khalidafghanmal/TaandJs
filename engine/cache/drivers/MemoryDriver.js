@@ -45,7 +45,9 @@ export class MemoryDriver {
   }
 
   async add(key, value, ttl = null) {
-    if ((await this.get(key)) !== undefined) return false;
+    // Check and set before the first await, so concurrent callers cannot both win.
+    const entry = this.#store.get(key);
+    if (entry && !isExpired(entry.expires)) return false;
     await this.put(key, value, ttl);
     return true;
   }

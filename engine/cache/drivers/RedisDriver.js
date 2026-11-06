@@ -25,6 +25,7 @@ export class RedisDriver {
     if (raw == null) return undefined;
 
     const entry = deserializeValue(raw);
+    if (typeof entry === 'number') return entry;
     if (!entry || isExpired(entry.expires)) {
       await this.forget(key);
       return undefined;
@@ -34,13 +35,7 @@ export class RedisDriver {
   }
 
   async put(key, value, ttl = null) {
-    const payload = serializeValue({
-      expires: ttlToExpiry(ttl),
-      value,
-      stored: Date.now(),
-      key,
-    });
-
+    const payload = this.#payload(key, value, ttl);
     const seconds = ttl != null ? Math.max(1, Math.ceil(Number(ttl))) : null;
 
     if (seconds) {
@@ -53,10 +48,8 @@ export class RedisDriver {
   }
 
   async add(key, value, ttl = null) {
-    const existing = await this.get(key);
-    if (existing !== undefined) return false;
-    await this.put(key, value, ttl);
-    return true;
+    const options = ttl != null ? { NX: true, PX: this.#milliseconds(ttl) } : { NX: true };
+    return (await this.#redis().set(key, this.#payload(key, value, ttl), options)) === 'OK';
   }
 
   async forget(key) {
@@ -74,22 +67,15 @@ export class RedisDriver {
   }
 
   async increment(key, amount = 1, ttl = null) {
-    const existing = await this.get(key);
-    const next = (Number(existing) || 0) + amount;
+    const client = await this.#redis().raw();
+    if (ttl == null) return Number(await client.incrBy(key, amount));
 
-    let seconds = ttl;
-    if (existing !== undefined) {
-      const client = await this.#redis().raw();
-      const ttlVal = await client.ttl(key);
-      if (ttlVal > 0) {
-        seconds = ttlVal;
-      } else if (ttlVal === -1) {
-        seconds = null;
-      }
-    }
-
-    await this.put(key, next, seconds);
-    return next;
+    // SET NX seeds a new counter with its expiry; INCRBY keeps an existing counter's TTL.
+    const [, next] = await client.multi()
+      .set(key, '0', { NX: true, PX: this.#milliseconds(ttl) })
+      .incrBy(key, amount)
+      .exec();
+    return Number(next);
   }
 
   async keys(limit = 100) {
@@ -103,5 +89,20 @@ export class RedisDriver {
   async stats() {
     const keys = await this.keys(10_000);
     return { entries: keys.length, bytes: 0 };
+  }
+
+  #payload(key, value, ttl) {
+    // Integers are stored raw so INCRBY can update them atomically.
+    if (Number.isInteger(value)) return String(value);
+    return serializeValue({
+      expires: ttlToExpiry(ttl),
+      value,
+      stored: Date.now(),
+      key,
+    });
+  }
+
+  #milliseconds(ttl) {
+    return Math.max(1, Math.ceil(Number(ttl) * 1000));
   }
 }

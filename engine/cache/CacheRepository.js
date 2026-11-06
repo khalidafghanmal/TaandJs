@@ -85,8 +85,10 @@ export class CacheRepository {
   }
 
   async add(key, value, ttl = null) {
-    if (await this.has(key)) return false;
-    await this.put(key, value, ttl);
+    const full = this.#key(key);
+    if (!(await this.#driver.add(full, value, ttl))) return false;
+    this.#stats.writes += 1;
+    await this.#fire('cache.write', { key: full, store: this.#store, ttl });
     return true;
   }
 

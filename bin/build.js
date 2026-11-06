@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const dist = path.join(root, 'dist');
 
-const COPY_DIRS = [
+export const COPY_DIRS = [
   'start',
-  'config',
+  'settings',
   'flow',
   'src',
   'records',
@@ -120,9 +121,8 @@ async function copyRuntime() {
   await fs.mkdir(path.join(dist, 'storage', 'uploads'), { recursive: true });
 }
 
-async function writePackageJson() {
-  const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
-  const production = {
+export function productionPackageJson(pkg) {
+  return {
     name: pkg.name,
     version: pkg.version,
     type: 'module',
@@ -132,10 +132,13 @@ async function writePackageJson() {
       start: 'node serve.js',
       'queue:work': 'node queue.js work',
     },
-    dependencies: {
-      '@prisma/client': pkg.dependencies['@prisma/client'],
-    },
+    dependencies: pkg.dependencies,
   };
+}
+
+async function writePackageJson() {
+  const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+  const production = productionPackageJson(pkg);
 
   await fs.writeFile(path.join(dist, 'package.json'), `${JSON.stringify(production, null, 2)}\n`);
 }
@@ -154,7 +157,10 @@ async function main() {
   console.log('[Taand] Or locally: npm run start');
 }
 
-main().catch((err) => {
-  console.error('[Taand] Build failed:', err.message);
-  process.exit(1);
-});
+const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
+  main().catch((err) => {
+    console.error('[Taand] Build failed:', err.message);
+    process.exit(1);
+  });
+}

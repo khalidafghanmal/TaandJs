@@ -78,3 +78,30 @@ test('loadSettingsRegistry loads project settings', async () => {
   assert.deepEqual(registry.middleware.groups.web, ['startSession', 'csrf']);
   assert.equal(registry.cors.enabled, true);
 });
+
+test('session cookies default to Secure in production', async () => {
+  const saved = { env: process.env.TAAND_ENV, secure: process.env.TAAND_SESSION_SECURE };
+  const restore = (key, value) => {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  };
+
+  try {
+    delete process.env.TAAND_SESSION_SECURE;
+    process.env.TAAND_ENV = 'production';
+    let registry = await loadSettingsRegistry(basePath, { reloadStamp: `secure-prod-${Date.now()}` });
+    assert.equal(registry.auth.session.secure, true);
+
+    process.env.TAAND_SESSION_SECURE = 'false';
+    registry = await loadSettingsRegistry(basePath, { reloadStamp: `secure-override-${Date.now()}` });
+    assert.equal(registry.auth.session.secure, false);
+
+    delete process.env.TAAND_SESSION_SECURE;
+    process.env.TAAND_ENV = 'local';
+    registry = await loadSettingsRegistry(basePath, { reloadStamp: `secure-local-${Date.now()}` });
+    assert.equal(registry.auth.session.secure, false);
+  } finally {
+    restore('TAAND_ENV', saved.env);
+    restore('TAAND_SESSION_SECURE', saved.secure);
+  }
+});

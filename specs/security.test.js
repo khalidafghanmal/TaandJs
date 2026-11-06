@@ -284,3 +284,20 @@ test('can fails closed without authenticated user', async () => {
   assert.equal(await can('admin'), false);
   await assert.rejects(() => authorize('admin'), (err) => err.status === 403);
 });
+
+test('CsrfProtection marks the XSRF cookie Secure when sessions are secure', async () => {
+  const sessions = {
+    store: { _csrf: 'secure-token' },
+    get(_s, key) { return this.store[key]; },
+    put(_s, key, val) { this.store[key] = val; },
+  };
+  const { app } = miniApp({ session: sessions, config: { auth: { session: { secure: true } } } });
+  const mw = new CsrfProtection(app);
+  const request = req('/page');
+  request.setAttribute('_session', 'sess1');
+  const res = await mw.handle(request, async () => Response.text('ok'));
+  await mw.terminate(request, res);
+
+  const cookie = res.headers['Set-Cookie'].find((c) => c.startsWith('XSRF-TOKEN='));
+  assert.match(cookie, /; Secure(;|$)/);
+});

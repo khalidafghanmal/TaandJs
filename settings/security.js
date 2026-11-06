@@ -11,7 +11,7 @@ export default {
       lifetime: Number(env('TAAND_SESSION_LIFETIME', '120')),
       path: 'storage/sessions',
       cookie: env('TAAND_SESSION_COOKIE', 'taand_session'),
-      secure: env('TAAND_SESSION_SECURE', 'false') === 'true',
+      secure: env('TAAND_SESSION_SECURE', env('TAAND_ENV', 'local') === 'production' ? 'true' : 'false') === 'true',
       sameSite: env('TAAND_SESSION_SAME_SITE', 'lax'),
       rememberDays: Number(env('TAAND_REMEMBER_DAYS', '14')),
     },

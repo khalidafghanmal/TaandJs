@@ -28,7 +28,8 @@ export class CsrfProtection extends Middleware {
     if (!(response instanceof Response) || MUTATING.has(request.method)) return;
 
     const token = this.#token(request);
-    Response.appendCookie(response, `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict`);
+    const secure = this.app.make('config').get('auth.session.secure', false) ? '; Secure' : '';
+    Response.appendCookie(response, `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict${secure}`);
     response.headers['X-CSRF-TOKEN'] = token;
   }
 

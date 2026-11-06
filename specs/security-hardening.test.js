@@ -331,3 +331,30 @@ test('auth tokenCan fails closed for session users', async () => {
   assert.equal(auth.check(), true);
   assert.equal(auth.tokenCan('anything'), false);
 });
+
+test('remember-me cookie is Secure when sessions are secure', async () => {
+  const app = Object.assign(new Container(), { basePath: process.cwd(), debug: false });
+  const config = new Config();
+  config.merge({
+    auth: { session: { secure: true }, remember: { cookie: 'taand_remember' } },
+    app: { key: 'test-key' },
+  });
+  const hasher = new Hasher({ N: 1024, r: 8, p: 1, keyLength: 32 });
+  const users = { async updateRememberToken() {} };
+  const sessions = { get: () => null, put: () => {}, forget: () => {}, regenerate: () => {} };
+
+  app.make = (name) => {
+    if (name === 'config') return config;
+    if (name === 'hasher') return hasher;
+    if (name === 'users') return users;
+    if (name === 'session') return sessions;
+    throw new Error(name);
+  };
+  app.has = () => false;
+
+  const request = req('/login', { method: 'POST' });
+  request.setAttribute('_session', {});
+  await new AuthManager(app).forRequest(request).login({ id: 1, role: 'user' }, true);
+
+  assert.match(request.attribute('_remember_cookie'), /; Secure(;|$)/);
+});

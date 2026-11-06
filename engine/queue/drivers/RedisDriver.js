@@ -32,8 +32,13 @@ export class RedisDriver {
     return `${this.#prefix()}delayed:${queue}`;
   }
 
-  #reservedKey(queue, id) {
-    return `${this.#prefix()}reserved:${queue}:${id}`;
+  // Reservations: a ZSET of job ids scored by expiry, plus a hash of the reserved job bodies.
+  #reservedKey() {
+    return `${this.#prefix()}reserved`;
+  }
+
+  #reservedJobsKey() {
+    return `${this.#prefix()}reserved:jobs`;
   }
 
   async push(record) {
@@ -64,6 +69,7 @@ export class RedisDriver {
 
   async pop(queue = 'default') {
     await this.#migrateDelayed(queue);
+    await this.#migrateExpired();
 
     const raw = await this.#redis().rPop(this.#listKey(queue));
     if (!raw) return null;
@@ -72,43 +78,25 @@ export class RedisDriver {
     job.attempts += 1;
     job.reservedAt = new Date().toISOString();
 
-    await this.#redis().setEx(
-      this.#reservedKey(queue, job.id),
-      this.#retryAfter,
-      JSON.stringify(job),
-    );
+    // Not atomic with rPop: a crash between the two still loses the job (closing that needs a Lua script).
+    const client = await this.#redis().raw();
+    await client.hSet(this.#reservedJobsKey(), job.id, JSON.stringify(job));
+    await client.zAdd(this.#reservedKey(), { score: Date.now() + this.#retryAfter * 1000, value: job.id });
 
     return job;
   }
 
   async delete(id) {
     const client = await this.#redis().raw();
-    const keys = await client.keys(`*reserved:*:${id}`);
-    if (keys.length) await client.del(keys);
+    await client.zRem(this.#reservedKey(), id);
+    await client.hDel(this.#reservedJobsKey(), id);
   }
 
   async release(id, delaySeconds = 0) {
     const client = await this.#redis().raw();
-    const keys = await client.keys(`*reserved:*:${id}`);
-    if (!keys.length) return;
-
-    const raw = await client.get(keys[0]);
-    await client.del(keys[0]);
-    if (!raw) return;
-
-    const job = JSON.parse(raw);
-    job.reservedAt = null;
-    job.availableAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
-    const serialized = JSON.stringify(job);
-
-    if (delaySeconds > 0) {
-      await client.zAdd(this.#delayedKey(job.queue), {
-        score: Date.now() + delaySeconds * 1000,
-        value: serialized,
-      });
-    } else {
-      await client.lPush(this.#listKey(job.queue), serialized);
-    }
+    // 0 means the reservation already expired and #migrateExpired re-queued the job.
+    if (!(await client.zRem(this.#reservedKey(), id))) return;
+    await this.#requeue(client, id, delaySeconds);
   }
 
   async size(queue = 'default') {
@@ -139,12 +127,44 @@ export class RedisDriver {
 
   async #migrateDelayed(queue) {
     const client = await this.#redis().raw();
-    const now = Date.now();
-    const ready = await client.zRangeByScore(this.#delayedKey(queue), 0, now);
+    const ready = await client.zRangeByScore(this.#delayedKey(queue), 0, Date.now());
 
     for (const raw of ready) {
-      await client.lPush(this.#listKey(queue), raw);
-      await client.zRem(this.#delayedKey(queue), raw);
+      // Only the worker whose zRem succeeds pushes, so concurrent workers don't duplicate the job.
+      if (await client.zRem(this.#delayedKey(queue), raw)) {
+        await client.lPush(this.#listKey(queue), raw);
+      }
+    }
+  }
+
+  async #migrateExpired() {
+    const client = await this.#redis().raw();
+    const expired = await client.zRangeByScore(this.#reservedKey(), 0, Date.now());
+
+    for (const id of expired) {
+      if (await client.zRem(this.#reservedKey(), id)) {
+        await this.#requeue(client, id, 0);
+      }
+    }
+  }
+
+  async #requeue(client, id, delaySeconds) {
+    const raw = await client.hGet(this.#reservedJobsKey(), id);
+    await client.hDel(this.#reservedJobsKey(), id);
+    if (!raw) return;
+
+    const job = JSON.parse(raw);
+    job.reservedAt = null;
+    job.availableAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
+    const serialized = JSON.stringify(job);
+
+    if (delaySeconds > 0) {
+      await client.zAdd(this.#delayedKey(job.queue), {
+        score: Date.now() + delaySeconds * 1000,
+        value: serialized,
+      });
+    } else {
+      await client.lPush(this.#listKey(job.queue), serialized);
     }
   }
 }

@@ -79,14 +79,11 @@ DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:5432/taand?schema=public"
 
 ## CI (GitHub Actions)
 
-CI uses the same pattern: a **Postgres service container** plus `DATABASE_URL`, then:
+CI (`.github/workflows/ci.yml`) runs `npm test` and `npm run build` on Node.js 22 and 24 without a database service. To check migrations against a fresh PostgreSQL instance, start one (e.g. `npm run docker:up`) and run:
 
 ```bash
 npm run db:migrate:prod   # production migration command — not migrate dev
-npm test
 ```
-
-This proves migrations apply cleanly on a fresh PostgreSQL instance.
 
 ---
 

@@ -113,14 +113,13 @@ Use PM2, systemd, or Docker orchestration to keep both alive.
 
 ## CI alignment
 
-GitHub Actions (`.github/workflows/ci.yml`) mirrors production:
+GitHub Actions (`.github/workflows/ci.yml`) runs on Node.js 22 and 24:
 
-1. Postgres service container
-2. `DATABASE_URL` / `DIRECT_URL` env vars
-3. `npm run db:migrate:prod`
-4. `npm test` + `npm run build`
+1. `npm ci` + `npm run db:generate`
+2. `npm test`
+3. `npm run build` and check `dist/serve.js` exists
 
-If CI passes, migrations work on a clean PostgreSQL instance.
+CI does not run migrations against a database; run `npm run db:migrate:prod` against a staging database before deploying.
 
 ---
 
@@ -129,7 +128,7 @@ If CI passes, migrations work on a clean PostgreSQL instance.
 Infrastructure-only compose is in [docker.md](./docker.md). To containerize the app:
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev

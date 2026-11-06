@@ -1,5 +1,6 @@
 import { loadApp } from '../utils/loadApp.js';
 import { ProductionServer } from '../../server/ProductionServer.js';
+import { cliErrorMessage } from '../utils/errorMessage.js';
 
 export async function runServe() {
   const app = await loadApp(import.meta.url);
@@ -23,7 +24,7 @@ export async function runServe() {
 
       process.exit(0);
     } catch (err) {
-      console.error('[Taand]', err.message);
+      console.error(cliErrorMessage(err));
       process.exit(1);
     }
   }

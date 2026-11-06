@@ -1,6 +1,7 @@
 import { loadApp } from '../utils/loadApp.js';
 import { DevServer } from '../../server/DevServer.js';
 import { DevConsole } from '../../server/DevConsole.js';
+import { cliErrorMessage } from '../utils/errorMessage.js';
 
 export async function runDev() {
   const app = await loadApp(import.meta.url);
@@ -27,7 +28,7 @@ export async function runDev() {
       DevConsole.printStopped();
       process.exit(0);
     } catch (err) {
-      console.error('[Taand]', err.message);
+      console.error(cliErrorMessage(err));
       process.exit(1);
     }
   }

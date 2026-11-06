@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { runQueueFailed, runQueueWork } from '../engine/cli/runners/queue.js';
+import { cliErrorMessage } from '../engine/cli/utils/errorMessage.js';
 
 const argv = process.argv.slice(2);
 const sub = argv[0] ?? 'work';
@@ -16,6 +17,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[Taand]', err.message);
+  console.error(cliErrorMessage(err));
   process.exit(1);
 });

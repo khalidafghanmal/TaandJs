@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { runDev } from '../engine/cli/runners/dev.js';
+import { cliErrorMessage } from '../engine/cli/utils/errorMessage.js';
 
 runDev().catch((err) => {
-  console.error('[Taand]', err.message);
+  console.error(cliErrorMessage(err));
   process.exit(1);
 });

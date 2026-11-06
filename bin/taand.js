@@ -5,10 +5,12 @@
  * Start the app with: npm run dev | npm run build && npm start
  */
 
+import { cliErrorMessage } from '../engine/cli/utils/errorMessage.js';
+
 const argv = process.argv.slice(2);
 
 function fail(err) {
-  console.error('[Taand]', err.message);
+  console.error(cliErrorMessage(err));
   process.exit(1);
 }
 

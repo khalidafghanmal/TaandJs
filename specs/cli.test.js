@@ -11,6 +11,7 @@ import { MakeControllerCommand } from '../engine/cli/commands/make/MakeControlle
 import { GeneratorEngine } from '../engine/cli/generator/GeneratorEngine.js';
 import { TemplateEngine } from '../engine/cli/generator/TemplateEngine.js';
 import { isMakeCommand } from '../engine/cli/generator/runGenerator.js';
+import { cliErrorMessage } from '../engine/cli/utils/errorMessage.js';
 
 const execFileAsync = promisify(execFile);
 const TAAND_ROOT = path.resolve(import.meta.dirname, '..');
@@ -114,4 +115,17 @@ test('make:controller cold start completes under 1 second', async () => {
   });
   const elapsed = Date.now() - start;
   assert.ok(elapsed < 2500, `expected <2500ms, got ${elapsed}ms`);
+});
+
+test('CLI prints the [Taand] prefix on errors only once', async () => {
+  const err = await execFileAsync(process.execPath, [TAAND_BIN, 'make:controller', 'HomeController'], {
+    cwd: TAAND_ROOT,
+    env: { ...process.env, TAAND_CLI_NO_DAEMON: '1' },
+  }).then(() => null, (e) => e);
+
+  assert.ok(err, 'expected make:controller to fail for an existing file');
+  assert.match(err.stderr, /^\[Taand\] File already exists/);
+  assert.doesNotMatch(err.stderr, /\[Taand\] \[Taand\]/);
+  assert.equal(cliErrorMessage(new Error('boom')), '[Taand] boom');
+  assert.equal(cliErrorMessage(new Error('[Taand] boom')), '[Taand] boom');
 });

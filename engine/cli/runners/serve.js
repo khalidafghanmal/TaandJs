@@ -1,7 +1,19 @@
-import { loadApp } from '../utils/loadApp.js';
+import { loadApp, resolvetaandbasePath } from '../utils/loadApp.js';
+import { loadEnv } from '../../core/Env.js';
 import { ProductionServer } from '../../server/ProductionServer.js';
 
+/**
+ * The production server must not inherit dev defaults (debug overlay, /__Taand dashboards)
+ * just because TAAND_ENV was left unset. Read .env first so an explicit value still wins.
+ */
+export function applyServeDefaults(basePath) {
+  loadEnv(basePath);
+  process.env.TAAND_ENV ??= 'production';
+}
+
 export async function runServe() {
+  // Before loadApp: importing the app (Prisma's dotenv, user modules) may already read env.
+  applyServeDefaults(resolvetaandbasePath(import.meta.url));
   const app = await loadApp(import.meta.url);
   let server = null;
   let shuttingDown = false;

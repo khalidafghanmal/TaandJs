@@ -1,9 +1,11 @@
 import { env } from '../engine/core/Env.js';
 
+const isProduction = env('TAAND_ENV', 'local') === 'production';
+
 /** Core runtime — app identity, environment, and dev tooling. */
 export default {
   name: env('TAAND_NAME', 'TaandJs'),
-  debug: env('TAAND_DEBUG', 'true') !== 'false',
+  debug: env('TAAND_DEBUG', isProduction ? 'false' : 'true') !== 'false',
   env: env('TAAND_ENV', 'local'),
   port: Number(env('TAAND_PORT', '2977')),
   fallbackPort: Number(env('TAAND_FALLBACK_PORT', '1893')),

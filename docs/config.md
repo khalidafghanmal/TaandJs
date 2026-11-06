@@ -13,8 +13,8 @@ cp .env.example .env
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TAAND_NAME` | TaandJs | Application name |
-| `TAAND_ENV` | local | Environment |
-| `TAAND_DEBUG` | true | Show detailed errors |
+| `TAAND_ENV` | local (production under `npm run start`) | Environment |
+| `TAAND_DEBUG` | true (false when `TAAND_ENV=production`) | Show detailed errors |
 | `TAAND_PORT` | 2977 | Dev server port |
 | `TAAND_FALLBACK_PORT` | 1893 | Fallback port |
 | `TAAND_VIEW_CACHE` | true | Cache compiled views |

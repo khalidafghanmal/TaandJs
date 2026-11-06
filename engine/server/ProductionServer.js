@@ -3,6 +3,7 @@ import { Response } from '../http/Response.js';
 import { HttpRequestHandler } from './HttpRequestHandler.js';
 import { ProductionConsole } from './ProductionConsole.js';
 import { openBrowser } from './openBrowser.js';
+import { toBrowseUrl } from './serverUrl.js';
 import { assertProductionEnv } from '../core/ProductionEnvValidator.js';
 
 /**

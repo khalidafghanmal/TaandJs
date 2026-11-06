@@ -17,11 +17,11 @@ export class RedisDriver {
 
   async ttl(key) {
     const client = await this.#redis().raw();
-    return client.ttl(key);
+    return client.ttl(this.#prefixed(key));
   }
 
   async get(key) {
-    const raw = await this.#redis().get(key);
+    const raw = await this.#redis().get(this.#prefixed(key));
     if (raw == null) return undefined;
 
     const entry = deserializeValue(raw);
@@ -44,9 +44,9 @@ export class RedisDriver {
     const seconds = ttl != null ? Math.max(1, Math.ceil(Number(ttl))) : null;
 
     if (seconds) {
-      await this.#redis().setEx(key, seconds, payload);
+      await this.#redis().setEx(this.#prefixed(key), seconds, payload);
     } else {
-      await this.#redis().set(key, payload);
+      await this.#redis().set(this.#prefixed(key), payload);
     }
 
     return true;
@@ -60,16 +60,15 @@ export class RedisDriver {
   }
 
   async forget(key) {
-    const deleted = await this.#redis().del(key);
+    const deleted = await this.#redis().del(this.#prefixed(key));
     return deleted > 0;
   }
 
   async flush() {
-    const redis = this.#redis();
-    const prefix = redis.prefix();
-    const client = await redis.raw();
-    const keys = await client.keys(`${prefix}*`);
-    if (keys.length) await client.del(keys);
+    const client = await this.#redis().raw();
+    for await (const batch of this.#scan(client)) {
+      if (batch.length) await client.del(batch);
+    }
     return true;
   }
 
@@ -80,7 +79,7 @@ export class RedisDriver {
     let seconds = ttl;
     if (existing !== undefined) {
       const client = await this.#redis().raw();
-      const ttlVal = await client.ttl(key);
+      const ttlVal = await client.ttl(this.#prefixed(key));
       if (ttlVal > 0) {
         seconds = ttlVal;
       } else if (ttlVal === -1) {
@@ -93,15 +92,31 @@ export class RedisDriver {
   }
 
   async keys(limit = 100) {
-    const redis = this.#redis();
-    const prefix = redis.prefix();
-    const client = await redis.raw();
-    const found = await client.keys(`${prefix}*`);
-    return found.slice(0, limit).map((k) => k.slice(prefix.length));
+    const prefix = this.#redis().prefix();
+    const client = await this.#redis().raw();
+    const found = [];
+    for await (const batch of this.#scan(client)) {
+      found.push(...batch.map((k) => k.slice(prefix.length)));
+      if (found.length >= limit) break;
+    }
+    return found.slice(0, limit);
   }
 
   async stats() {
     const keys = await this.keys(10_000);
     return { entries: keys.length, bytes: 0 };
+  }
+
+  #prefixed(key) {
+    return `${this.#redis().prefix()}${key}`;
+  }
+
+  /** SCAN (non-blocking, unlike KEYS) over this connection's prefix, in batches. */
+  async *#scan(client) {
+    // Escape glob characters so the prefix is matched literally.
+    const match = `${this.#redis().prefix().replace(/[*?[\]\\]/g, '\\$&')}*`;
+    for await (const batch of client.scanIterator({ MATCH: match, COUNT: 500 })) {
+      yield [].concat(batch);
+    }
   }
 }

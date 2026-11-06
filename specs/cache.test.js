@@ -99,3 +99,40 @@ test('cache null driver discards values', async () => {
   await cache.put('x', 'y');
   assert.equal(await cache.has('x'), false);
 });
+
+test('redis cache stores keys under the connection prefix and flush clears them', async () => {
+  const { RedisDriver } = await import('../engine/cache/drivers/RedisDriver.js');
+  const data = new Map([['other:app:key', 'keep']]);
+  const client = {
+    async get(key) { return data.get(key) ?? null; },
+    async set(key, value) { data.set(key, value); return 'OK'; },
+    async setEx(key, _seconds, value) { data.set(key, value); return 'OK'; },
+    async del(keys) { return [].concat(keys).filter((k) => data.delete(k)).length; },
+    async ttl(key) { return data.has(key) ? 60 : -2; },
+    async keys() { throw new Error('KEYS blocks the server; use SCAN'); },
+    async *scanIterator({ MATCH }) {
+      const literal = MATCH.slice(0, -1).replace(/\\(.)/g, '$1');
+      yield [...data.keys()].filter((k) => k.startsWith(literal));
+    },
+  };
+  const connection = {
+    get: (...args) => client.get(...args),
+    set: (...args) => client.set(...args),
+    setEx: (...args) => client.setEx(...args),
+    del: (...args) => client.del(...args),
+    prefix: () => 'Taand:cache:',
+    raw: async () => client,
+  };
+  const driver = new RedisDriver({ make: () => ({ connection: () => connection }) }, { connection: 'cache' });
+
+  await driver.put('user:1', { name: 'Ada' }, 60);
+  await driver.put('forever', 'x');
+  assert.ok(data.has('Taand:cache:user:1'));
+  assert.deepEqual((await driver.get('user:1')), { name: 'Ada' });
+  assert.equal(await driver.ttl('user:1'), 60);
+  assert.deepEqual((await driver.keys()).sort(), ['forever', 'user:1']);
+
+  await driver.flush();
+  assert.equal(await driver.get('user:1'), undefined);
+  assert.deepEqual([...data.keys()], ['other:app:key']);
+});

@@ -1,4 +1,4 @@
-import { CliDaemonServer } from '../daemon/server.js';
+import { CliDaemonServer } from '../../daemon/server.js';
 
 export class DaemonCommand {
   name = 'daemon';

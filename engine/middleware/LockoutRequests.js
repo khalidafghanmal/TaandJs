@@ -9,7 +9,7 @@ const AUTH_RETURN_PATHS = ['/login', '/register', '/forgot-password', '/reset-pa
  * Use on routes: lockout:5,1  (5 failures, 1 minute decay)
  *
  * Unlike throttle (IP + path), lockout keys by identity field + IP.
- * Counts failed attempts only (Taand AuthenticatesUsers style).
+ * Every attempt is reserved up front; a successful login clears the counter.
  */
 export class LockoutRequests extends Middleware {
   static #fallbackHits = new Map();
@@ -29,18 +29,15 @@ export class LockoutRequests extends Middleware {
   async handle(request, next) {
     const key = lockoutKeyFromRequest(request, this.identityField);
 
-    if (this.app.has('rateLimiter')) {
-      const limiter = this.app.make('rateLimiter');
-      if (await limiter.tooManyAttempts(key, this.maxAttempts)) {
-        const retryAfter = await limiter.availableIn(key, this.decaySeconds);
-        return this.#tooMany(request, retryAfter);
-      }
-    } else if (this.#isInMemoryBlocked(key)) {
-      const retryAfter = this.#inMemoryRetryIn(key);
-      return this.#tooMany(request, retryAfter);
+    // Reserve the attempt before the (slow) credential check runs, so parallel
+    // requests cannot all pass a check that is only updated afterwards.
+    const hits = await this.#recordAttempt(key);
+    if (hits > this.maxAttempts) {
+      return this.#tooMany(request, await this.#retryAfter(key));
     }
 
     request.setAttribute('_lockoutKey', key);
+    request.setAttribute('_lockoutHits', hits);
     return next(request);
   }
 
@@ -53,21 +50,25 @@ export class LockoutRequests extends Middleware {
       return;
     }
 
-    if (!this.#isFailure(request, response)) return;
-
-    const hits = await this.#recordFailure(key);
-
     if (response instanceof Response) {
+      const hits = request.attribute('_lockoutHits') ?? this.maxAttempts;
       response.headers['X-Lockout-Limit'] = String(this.maxAttempts);
       response.headers['X-Lockout-Remaining'] = String(Math.max(0, this.maxAttempts - hits));
     }
   }
 
-  async #recordFailure(key) {
+  async #recordAttempt(key) {
     if (this.app.has('rateLimiter')) {
       return this.app.make('rateLimiter').hit(key, this.decaySeconds);
     }
     return this.#hitInMemory(key);
+  }
+
+  async #retryAfter(key) {
+    if (this.app.has('rateLimiter')) {
+      return this.app.make('rateLimiter').availableIn(key, this.decaySeconds);
+    }
+    return this.#inMemoryRetryIn(key);
   }
 
   async #clear(key) {
@@ -94,23 +95,6 @@ export class LockoutRequests extends Middleware {
     return false;
   }
 
-  #isFailure(request, response) {
-    if (request.attribute('_lockoutClear')) return false;
-    if (request.attribute('_lockoutFailed')) return true;
-    if (!(response instanceof Response)) return false;
-
-    const status = response.status;
-    if (status >= 500 || status === 429) return false;
-    if (status >= 400) return true;
-
-    if (status >= 300 && status < 400) {
-      const location = this.#location(response);
-      return AUTH_RETURN_PATHS.some((p) => location === p || location.startsWith(`${p}?`));
-    }
-
-    return false;
-  }
-
   #location(response) {
     return String(response.headers?.Location ?? response.headers?.location ?? '');
   }
@@ -123,18 +107,6 @@ export class LockoutRequests extends Middleware {
         'X-Lockout-Remaining': '0',
       },
     });
-  }
-
-  #isInMemoryBlocked(key) {
-    const bucket = LockoutRequests.#fallbackHits.get(key);
-    if (!bucket) return false;
-
-    if (Date.now() > bucket.resetAt) {
-      LockoutRequests.#fallbackHits.delete(key);
-      return false;
-    }
-
-    return bucket.count >= this.maxAttempts;
   }
 
   #inMemoryRetryIn(key) {

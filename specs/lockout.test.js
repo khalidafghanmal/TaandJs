@@ -127,7 +127,8 @@ test('lockout counts thrown 401 from controller', async () => {
 
   const { response: blocked } = await pipe.send(request, ['lockout:2,1'], fail);
   assert.equal(blocked.status, 429);
-  assert.equal(await rateLimiter.attempts('attempt:throw@test.com|127.0.0.1'), 2);
+  // The blocked request is reserved too, so it shows up in the counter.
+  assert.equal(await rateLimiter.attempts('attempt:throw@test.com|127.0.0.1'), 3);
 });
 
 test('lockout in-memory fallback blocks without redis', async () => {
@@ -150,4 +151,55 @@ test('lockout in-memory fallback blocks without redis', async () => {
 
   const blocked = await mw.handle(request, fail);
   assert.equal(blocked.status, 429);
+});
+
+test('lockout reserves attempts so parallel requests cannot exceed the limit', async () => {
+  const { app } = lockoutApp();
+  const mw = new LockoutRequests(app, 3, 1);
+  // Simulate a slow password check: every request is in flight before any terminates.
+  const slowFail = () => new Promise((resolve) => {
+    setTimeout(() => resolve(new Response('', 302, { Location: '/login' })), 20);
+  });
+
+  const requests = await Promise.all(Array.from({ length: 10 }, () => reqBody(
+    'POST',
+    '/login',
+    { email: 'race@test.com', password: 'guess' },
+  )));
+
+  let reachedController = 0;
+  const responses = await Promise.all(requests.map((request) => mw.handle(request, async () => {
+    reachedController++;
+    return slowFail();
+  })));
+  await Promise.all(requests.map((request, i) => mw.terminate(request, responses[i])));
+
+  assert.equal(reachedController, 3);
+  assert.equal(responses.filter((r) => r.status === 429).length, 7);
+});
+
+test('lockout in-memory fallback reserves attempts for parallel requests', async () => {
+  const app = Object.assign(new Container(), { basePath: process.cwd() });
+  const config = new Config();
+  config.merge({ app: { debug: false, name: 'Test' } });
+  app.instance('config', config);
+  app.instance('errors', new ErrorRenderer(app));
+  app.make = (name) => app.resolve(name);
+  app.has = () => false;
+
+  const mw = new LockoutRequests(app, 2, 1);
+  const requests = await Promise.all(Array.from({ length: 5 }, () => reqBody(
+    'POST',
+    '/login',
+    { email: 'race-mem@test.com', password: 'guess' },
+  )));
+
+  let reachedController = 0;
+  await Promise.all(requests.map((request) => mw.handle(request, async () => {
+    reachedController++;
+    await new Promise((r) => setTimeout(r, 10));
+    return new Response('', 302, { Location: '/login' });
+  })));
+
+  assert.equal(reachedController, 2);
 });

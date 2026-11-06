@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Request } from '../engine/http/Request.js';
+import { HttpRequestHandler } from '../engine/server/HttpRequestHandler.js';
 import { req, reqBody } from './helpers/setup.js';
 
 test('request path from url', () => {
@@ -114,4 +115,21 @@ test('request GET has empty body', () => {
 test('request input priority form over query', async () => {
   const r = await reqBody('POST', '/?name=query', { name: 'form' }, 'application/x-www-form-urlencoded');
   assert.equal(r.input('name'), 'form');
+});
+
+test('HttpRequestHandler preserves the query string for the app', async () => {
+  let seen = null;
+  const app = {
+    has: () => false,
+    handleRequest: async (raw) => {
+      seen = new Request(raw);
+      return { response: { send() {} } };
+    },
+  };
+  const raw = { method: 'GET', url: '/search?q=hello&page=2', headers: { host: 'localhost' } };
+
+  await new HttpRequestHandler(app).handle(raw, {});
+  assert.equal(seen.path, '/search');
+  assert.deepEqual(seen.query, { q: 'hello', page: '2' });
+  assert.equal(seen.input('q'), 'hello');
 });

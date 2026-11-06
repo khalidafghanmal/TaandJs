@@ -35,7 +35,8 @@ export class HttpRequestHandler {
         }
       }
 
-      rawReq.url = safePath;
+      const queryAt = rawReq.url?.indexOf('?') ?? -1;
+      rawReq.url = queryAt === -1 ? safePath : `${safePath}${rawReq.url.slice(queryAt)}`;
       const { response, terminate } = await this.app.handleRequest(rawReq);
 
       if (this.#transformResponse) {

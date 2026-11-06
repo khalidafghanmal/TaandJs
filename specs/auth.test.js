@@ -4,7 +4,12 @@ import { Hasher } from '../engine/auth/Hasher.js';
 import { Gate } from '../engine/auth/Gate.js';
 import { Config } from '../engine/core/Config.js';
 import { Container } from '../engine/core/Container.js';
-import { miniApp } from './helpers/setup.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { SessionStore } from '../engine/auth/SessionStore.js';
+import { Response } from '../engine/http/Response.js';
+import { miniApp, req } from './helpers/setup.js';
 
 const hasher = new Hasher({ N: 1024, r: 8, p: 1, keyLength: 32 });
 
@@ -105,4 +110,73 @@ test('gate view-admin uses hierarchy', async () => {
   const gate = new Gate(app);
   assert.equal(await gate.allows('view-admin', { role: 'admin' }), true);
   assert.equal(await gate.allows('view-admin', { role: 'user' }), false);
+});
+
+function sessionStoreFor(session = {}) {
+  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), 'taand-sess-'));
+  const app = Object.assign(new Container(), { basePath, debug: false });
+  const config = new Config();
+  config.merge({ app: { key: 'test-key' }, auth: { session: { path: 'sessions', ...session } } });
+  app.make = (name) => (name === 'config' ? config : null);
+  return {
+    store: new SessionStore(app),
+    dir: path.join(basePath, 'sessions'),
+    cleanup: () => fs.rmSync(basePath, { recursive: true, force: true }),
+  };
+}
+
+async function countDirScans(fn) {
+  const original = fs.readdirSync;
+  let scans = 0;
+  fs.readdirSync = (...args) => {
+    scans++;
+    return original(...args);
+  };
+  try {
+    await fn();
+  } finally {
+    fs.readdirSync = original;
+  }
+  return scans;
+}
+
+test('session store does not scan the whole session directory on every request', async () => {
+  const { store, cleanup } = sessionStoreFor();
+  try {
+    const scans = await countDirScans(() => {
+      for (let i = 0; i < 200; i++) {
+        const session = store.load(req('/'));
+        store.put(session, '_csrf', 'x');
+        store.commit(session, Response.text('ok'));
+      }
+    });
+    assert.ok(scans < 50, `expected occasional GC, got ${scans} scans for 200 requests`);
+  } finally {
+    cleanup();
+  }
+});
+
+test('session gc lottery is configurable and still removes expired sessions', async () => {
+  const never = sessionStoreFor({ lottery: [0, 100] });
+  try {
+    const scans = await countDirScans(() => {
+      for (let i = 0; i < 20; i++) never.store.commit(never.store.load(req('/')), Response.text('ok'));
+    });
+    assert.equal(scans, 0);
+  } finally {
+    never.cleanup();
+  }
+
+  const always = sessionStoreFor({ lottery: [1, 1], lifetime: 1 });
+  try {
+    const stale = path.join(always.dir, `sess_${'a'.repeat(40)}`);
+    fs.writeFileSync(stale, '{}');
+    const old = new Date(Date.now() - 5 * 60_000);
+    fs.utimesSync(stale, old, old);
+
+    always.store.commit(always.store.load(req('/')), Response.text('ok'));
+    assert.equal(fs.existsSync(stale), false);
+  } finally {
+    always.cleanup();
+  }
 });

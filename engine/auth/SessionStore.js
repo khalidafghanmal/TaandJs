@@ -15,6 +15,7 @@ export class SessionStore {
     this.#cookie = config.cookie ?? 'taand_session';
     this.#secure = config.secure ?? false;
     this.#sameSite = config.sameSite ?? 'lax';
+    this.#lottery = config.lottery ?? [2, 100];
     this.#key = app.make('config').get('app.key', '');
     fs.mkdirSync(this.#path, { recursive: true });
   }
@@ -24,6 +25,7 @@ export class SessionStore {
   #cookie;
   #secure;
   #sameSite;
+  #lottery;
   #key;
 
   cookieName() {
@@ -99,7 +101,10 @@ export class SessionStore {
     }
 
     this.#setCookie(response, session.id);
-    this.#gc();
+
+    // GC scans the whole directory — run it on a fraction of requests only.
+    const [chance, outOf] = this.#lottery;
+    if (Math.random() * outOf < chance) this.#gc();
     return response;
   }
 

@@ -10,6 +10,7 @@ export default {
       connection: 'session',
       lifetime: Number(env('TAAND_SESSION_LIFETIME', '120')),
       path: 'storage/sessions',
+      lottery: [2, 100], // file driver: run session GC on 2 of every 100 requests
       cookie: env('TAAND_SESSION_COOKIE', 'taand_session'),
       secure: env('TAAND_SESSION_SECURE', 'false') === 'true',
       sameSite: env('TAAND_SESSION_SAME_SITE', 'lax'),

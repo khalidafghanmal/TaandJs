@@ -2,6 +2,7 @@ import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
 const scryptAsync = promisify(scrypt);
+const MIN_KEY_BYTES = 16;
 
 /**
  * Password hashing — Node scrypt (no extra dependencies).
@@ -48,6 +49,9 @@ export class Hasher {
     try {
       const salt = Buffer.from(parts[2], 'base64');
       const expected = Buffer.from(parts[3], 'base64');
+      // An empty key would make timingSafeEqual(empty, empty) accept any password.
+      if (expected.length < MIN_KEY_BYTES) return false;
+
       const derived = await scryptAsync(password, salt, expected.length, {
         N: this.#options.N,
         r: this.#options.r,

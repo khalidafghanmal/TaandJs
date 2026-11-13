@@ -165,8 +165,9 @@ export class Application extends Container {
       return runWithRequest(request, () => this.make('kernel').handle(request));
     } catch (error) {
       const status = error?.status ?? 500;
+      const message = status < 500 || this.debug ? error.message : undefined;
       return {
-        response: await this.make('errors').respond(null, status, { message: error.message }),
+        response: await this.make('errors').respond(null, status, { message }),
         terminate: async () => {},
       };
     }

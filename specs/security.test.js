@@ -284,3 +284,49 @@ test('can fails closed without authenticated user', async () => {
   assert.equal(await can('admin'), false);
   await assert.rejects(() => authorize('admin'), (err) => err.status === 403);
 });
+
+test('CsrfProtection ignores _token supplied in the query string', async () => {
+  const token = 'querytoken1234567890123456789012345678901234';
+  const sessions = {
+    store: { _csrf: token },
+    get(_s, key) { return this.store[key]; },
+    put(_s, key, val) { this.store[key] = val; },
+  };
+  const { app } = miniApp({ session: sessions });
+  const mw = new CsrfProtection(app);
+  const request = await reqBody(
+    'POST',
+    `/form?_token=${token}`,
+    { name: 'x' },
+    'application/x-www-form-urlencoded',
+    { cookie: `XSRF-TOKEN=${token}` },
+  );
+  request.setAttribute('_session', 'sess1');
+  const res = await mw.handle(request, async () => Response.text('ok'));
+  assert.equal(res.status, 419);
+});
+
+test('CsrfProtection accepts token from JSON body and X-XSRF-TOKEN header', async () => {
+  const token = 'headertoken123456789012345678901234567890123';
+  const sessions = {
+    store: { _csrf: token },
+    get(_s, key) { return this.store[key]; },
+    put(_s, key, val) { this.store[key] = val; },
+  };
+  const { app } = miniApp({ session: sessions });
+  const mw = new CsrfProtection(app);
+
+  const viaJson = await reqBody('POST', '/form', { _token: token }, 'application/json', {
+    cookie: `XSRF-TOKEN=${token}`,
+  });
+  const viaHeader = await reqBody('POST', '/form', {}, 'application/json', {
+    cookie: `XSRF-TOKEN=${token}`,
+    'x-xsrf-token': token,
+  });
+
+  for (const request of [viaJson, viaHeader]) {
+    request.setAttribute('_session', 'sess1');
+    const res = await mw.handle(request, async () => Response.text('ok'));
+    assert.equal(res.status, 200);
+  }
+});

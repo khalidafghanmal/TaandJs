@@ -74,3 +74,16 @@ test('Pipeline still runs terminate on success', async () => {
   await terminate();
   assert.equal(terminated, true);
 });
+
+test('debug overlay only shows the current request error', async () => {
+  const { app } = miniApp({ handlers: { log: { error() {}, warning() {} } } });
+  app.debug = true;
+  const exceptions = new ExceptionHandler(app);
+
+  await exceptions.render(new Error('alice@example.com secret-token-123'), req('/account'));
+  const response = await exceptions.render(new Error('bob error'), req('/other'));
+
+  assert.equal(response.status, 500);
+  assert.match(response.body, /bob error/);
+  assert.doesNotMatch(response.body, /secret-token-123/);
+});

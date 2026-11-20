@@ -207,6 +207,32 @@ test('assertDevDashboard accepts localhost socket', () => {
   assert.doesNotThrow(() => assertDevDashboard(app, req('/__Taand/cache')));
 });
 
+test('assertDevDashboard rejects non-local Host (DNS rebinding)', () => {
+  const app = Object.assign(new Container(), {
+    debug: true,
+    make(name) {
+      if (name === 'config') {
+        return {
+          get(key, fallback) {
+            if (key === 'app.env') return 'local';
+            if (key === 'app.devDashboardKey') return '';
+            if (key === 'app.url') return 'http://myapp.test:2977';
+            return fallback;
+          },
+        };
+      }
+      throw new Error(name);
+    },
+  });
+
+  const rebound = req('/__Taand/mail', { headers: { host: 'attacker.example:2977' } });
+  assert.throws(() => assertDevDashboard(app, rebound), (err) => err.status === 403);
+
+  for (const host of ['127.0.0.1:2977', '[::1]:2977', 'localhost', 'myapp.test:2977']) {
+    assert.doesNotThrow(() => assertDevDashboard(app, req('/__Taand/mail', { headers: { host } })));
+  }
+});
+
 test('assertDevDashboard requires dashboard key when configured', () => {
   const app = Object.assign(new Container(), {
     debug: true,

@@ -1,4 +1,5 @@
 import net from 'node:net';
+import { resolveProjectRoot } from '../../server/resolveRoot.js';
 import {
   DAEMON_ENV,
   NO_DAEMON_ENV,
@@ -8,56 +9,57 @@ import {
   encodeMessage,
 } from './protocol.js';
 
-const DISPATCH_TIMEOUT_MS = 50;
+const CONNECT_TIMEOUT_MS = 50;
+const RESPONSE_TIMEOUT_MS = 30_000;
 
 /**
  * Try dispatching to a running CLI daemon (future worker mode).
  * Returns null when daemon is unavailable — caller falls back to cold start.
  */
-export function tryDaemonDispatch(argv) {
+export function tryDaemonDispatch(argv, { root = resolveProjectRoot(), socketPath } = {}) {
   if (process.env[NO_DAEMON_ENV] === '1' || process.env[NO_DAEMON_ENV] === 'true') {
     return null;
   }
 
-  const socketPath = process.env[SOCKET_ENV] ?? defaultSocketPath();
+  socketPath ??= process.env[SOCKET_ENV] ?? defaultSocketPath(root);
 
   return new Promise((resolve) => {
-    const client = net.createConnection({ path: socketPath }, () => {
-      const id = `${Date.now()}-${process.pid}`;
-      client.write(
-        encodeMessage({
-          type: MessageType.RUN,
-          id,
-          argv,
-        }),
-      );
-    });
-
+    let sent = false;
     let buffer = '';
+    let timer;
+
     const finish = (result) => {
+      clearTimeout(timer);
       client.destroy();
       resolve(result);
     };
+    // Once the request is sent the daemon may already have run it, so never fall back to a cold start.
+    const fail = (reason) =>
+      finish(sent ? { exitCode: 1, stdout: '', stderr: `[Taand] CLI daemon ${reason}\n` } : null);
 
-    const timer = setTimeout(() => finish(null), DISPATCH_TIMEOUT_MS);
+    const client = net.createConnection({ path: socketPath }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fail('did not respond'), RESPONSE_TIMEOUT_MS);
+      const id = `${Date.now()}-${process.pid}`;
+      client.write(encodeMessage({ type: MessageType.RUN, id, argv, root }));
+      sent = true;
+    });
+
+    timer = setTimeout(() => fail('did not respond'), CONNECT_TIMEOUT_MS);
 
     client.on('data', (chunk) => {
       buffer += chunk.toString();
       if (!buffer.includes('\n')) return;
-      clearTimeout(timer);
       try {
         const line = buffer.trim().split('\n').pop();
-        const response = JSON.parse(line);
-        finish(response);
+        finish(JSON.parse(line));
       } catch {
-        finish(null);
+        fail('sent an invalid response');
       }
     });
 
-    client.on('error', () => {
-      clearTimeout(timer);
-      finish(null);
-    });
+    client.on('error', () => fail('connection failed'));
+    client.on('close', () => fail('closed the connection'));
   });
 }
 

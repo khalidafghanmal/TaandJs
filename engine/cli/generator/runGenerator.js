@@ -9,7 +9,7 @@ export function isMakeCommand(commandName) {
 /**
  * Fast generator entry — skips registry, app bootstrap, and heavy CLI boot.
  */
-export function runMakeCommand(argv) {
+export function runMakeCommand(argv, { root = null } = {}) {
   const parsed = parseArgv(argv);
   const generatorId = MAKE_COMMAND_TO_GENERATOR[parsed.commandName];
 
@@ -27,5 +27,6 @@ export function runMakeCommand(argv) {
   return GeneratorEngine.run(generatorId, {
     positionals: parsed.positionals,
     flags: parsed.command.flags,
+    root,
   });
 }

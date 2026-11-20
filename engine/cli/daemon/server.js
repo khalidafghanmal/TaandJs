@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import net from 'node:net';
+import { resolveProjectRoot } from '../../server/resolveRoot.js';
 import { TemplateEngine } from '../generator/TemplateEngine.js';
 import { GENERATOR_STUB_NAMES } from '../generator/definitions.js';
 import { clearConfigCache } from '../cache/ConfigCache.js';
@@ -8,6 +10,7 @@ import { isMakeCommand } from '../generator/runGenerator.js';
 import {
   MessageType,
   defaultSocketPath,
+  normalizeRoot,
   decodeMessages,
   encodeMessage,
   SOCKET_ENV,
@@ -19,9 +22,11 @@ import {
  */
 export class CliDaemonServer {
   constructor(options = {}) {
-    this.#socketPath = options.socketPath ?? process.env[SOCKET_ENV] ?? defaultSocketPath();
+    this.#root = options.root ?? resolveProjectRoot();
+    this.#socketPath = options.socketPath ?? process.env[SOCKET_ENV] ?? defaultSocketPath(this.#root);
   }
 
+  #root;
   #socketPath;
   #server = null;
 
@@ -50,9 +55,31 @@ export class CliDaemonServer {
       });
     });
 
+    return this.#listen().catch(async (err) => {
+      if (err.code !== 'EADDRINUSE' || process.platform === 'win32' || (await this.#isAlive())) throw err;
+      // Leftover socket file from a daemon that died without cleanup.
+      fs.unlinkSync(this.#socketPath);
+      return this.#listen();
+    });
+  }
+
+  #listen() {
     return new Promise((resolve, reject) => {
-      this.#server.listen(this.#socketPath, () => resolve(this.#socketPath));
-      this.#server.on('error', reject);
+      this.#server.once('error', reject);
+      this.#server.listen(this.#socketPath, () => {
+        this.#server.off('error', reject);
+        resolve(this.#socketPath);
+      });
+    });
+  }
+
+  #isAlive() {
+    return new Promise((resolve) => {
+      const probe = net.createConnection({ path: this.#socketPath }, () => {
+        probe.destroy();
+        resolve(true);
+      });
+      probe.on('error', () => resolve(false));
     });
   }
 
@@ -76,6 +103,14 @@ export class CliDaemonServer {
     }
 
     if (message.type === MessageType.RUN && Array.isArray(message.argv)) {
+      if (typeof message.root !== 'string' || normalizeRoot(message.root) !== normalizeRoot(this.#root)) {
+        return {
+          id,
+          exitCode: 1,
+          stdout: '',
+          stderr: `[Taand] CLI daemon serves a different project (${this.#root}); run with TAAND_CLI_NO_DAEMON=1\n`,
+        };
+      }
       return this.#runArgv(message.argv, id);
     }
 
@@ -100,7 +135,7 @@ export class CliDaemonServer {
     try {
       const cmd = argv[0];
       if (isMakeCommand(cmd)) {
-        const result = runMakeCommand(argv);
+        const result = runMakeCommand(argv, { root: this.#root });
         if (result?.ok === false) exitCode = process.exitCode ?? 1;
       } else {
         chunks.stderr += `[Taand] Daemon only handles make:* commands currently\n`;

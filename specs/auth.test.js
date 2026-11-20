@@ -112,3 +112,24 @@ test('gate view-admin uses hierarchy', async () => {
   assert.equal(await gate.allows('view-admin', { role: 'admin' }), true);
   assert.equal(await gate.allows('view-admin', { role: 'user' }), false);
 });
+
+test('gate does not resolve abilities to Object.prototype members', async () => {
+  const { gate } = miniApp();
+  class Post {}
+  class PostPolicy {
+    update(user, post) {
+      return user.id === post.userId;
+    }
+  }
+  gate.policy('Post', PostPolicy);
+
+  const user = { id: 1, role: 'user' };
+  const post = Object.assign(new Post(), { userId: 2 });
+  for (const ability of ['toString', 'valueOf', 'toLocaleString', 'constructor', '__proto__']) {
+    assert.equal(await gate.allows(ability, user, post), false, ability);
+  }
+  assert.equal(await gate.allows('update', { id: 2, role: 'user' }, post), true);
+
+  assert.equal(await gate.allows('content.view', { role: '__proto__' }), false);
+  assert.equal(await gate.allows('content.view', { role: 'constructor' }), false);
+});

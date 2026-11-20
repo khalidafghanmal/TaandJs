@@ -331,3 +331,16 @@ test('auth tokenCan fails closed for session users', async () => {
   assert.equal(auth.check(), true);
   assert.equal(auth.tokenCan('anything'), false);
 });
+
+test('assertProductionEnv rejects short or example app keys in production', () => {
+  for (const key of ['secret', 'a'.repeat(31), 'your-random-32-plus-character-secret']) {
+    assert.throws(
+      () => assertProductionEnv(configWith({ app: { key } })),
+      /TAAND_APP_KEY/,
+      `key ${JSON.stringify(key)} should be rejected`,
+    );
+  }
+
+  assert.doesNotThrow(() => assertProductionEnv(configWith({ app: { key: 'k'.repeat(32) } })));
+  assert.doesNotThrow(() => assertProductionEnv(configWith({ app: { key: 'short', env: 'local' } })));
+});
